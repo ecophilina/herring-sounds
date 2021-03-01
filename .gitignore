@@ -1,18 +1,39 @@
-# Build and Release Folders
-bin-debug/
-bin-release/
-[Oo]bj/
-[Bb]in/
-
-# Other files and folders
-.settings/
-
-# Executables
-*.swf
-*.air
-*.ipa
-*.apk
-
-# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
-# should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
+# Data files
+/odata/
+/wdata/
+/selection.tables/
+/w.selection.tables/
+*.xls
+*.csv
+*.rds
+# *.txt
+# figures
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.tiff
+*.zip
+# Docs
+*.doc
+*.docx
+# History files
+.Rhistory
+.Rapp.history
+# Session Data files
+.RData
+# User-specific files
+.Ruserdata
+.DS_Store
+# RStudio files
+.Rproj.user/
+# produced htmls
+scripts/*.html
+# knitr and R markdown default cache directories
+*_cache/
+/cache/
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+# R Environment Variables
+.Renviron
