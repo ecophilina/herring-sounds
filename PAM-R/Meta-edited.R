@@ -76,6 +76,7 @@ for (i in 1:nf){				#loop through files and analyse
 	cat('File ',i,'/',nf,': ',basename(nowfile),' analysed in ',(proc.time()-tana)[3],' s\n',sep="")
 }
 	ofile <- paste(gsub(".csv","",file.path(dirname(fullfile),'Conk')),'_',basename(dirname(fullfile)),'_',calstring,'_',atype,'_',N,'pt',winname,'Window_',round(r*100),'pcOlap.csv',sep = "")
+	ofile2 <- paste(gsub(".csv","",file.path(dirname(fullfile),'Conk')),'_',basename(dirname(fullfile)),'_',calstring,'_',atype,'_',N,'pt',winname,'Window_',round(r*100),'pcOlap.rds',sep = "")
 cat('Analysis complete in ',(proc.time()-tglo)[3],' s\n',sep="")
 
 # PLOT OUTPUT
@@ -88,5 +89,8 @@ Viewer(fullfile=conc,ifile=basename(ofile),linlog=linlog)
 cat('Writing concatenated output array...')
 twri = proc.time()
 write.table(conc,file = ofile,row.names=FALSE,col.names=FALSE,quote=FALSE,sep=",",dec=".")
+saveRDS(conc,file = ofile2)
 cat('done in ',(proc.time()-twri)[3],' s\n',sep="")
+
+
 }
