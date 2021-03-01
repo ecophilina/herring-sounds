@@ -1,8 +1,8 @@
 # Data files
-/odata/
-/wdata/
-/selection.tables/
-/w.selection.tables/
+/raw-data/
+/raw-selections/
+/data/
+/edited-selections/
 *.xls
 *.csv
 *.rds
