@@ -6,6 +6,7 @@
 *.xls
 *.csv
 *.rds
+*.wav
 # *.txt
 # figures
 *.pdf
