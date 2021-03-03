@@ -384,10 +384,16 @@ if (outwrite == 1){
 if (atype == 'Waveform') {
 ofile <- paste(gsub(".wav","",file.path(outdir,basename(fullfile))),'_',atype,'.csv',sep = "")
 write.table(A,file = ofile,row.names=FALSE,quote=FALSE,col.names=FALSE,sep=",")
+
+ofile2 <- paste(gsub(".wav","",file.path(outdir,basename(fullfile))),'_',atype,'.rds',sep = "")
+saveRDS(A,file = ofile2)
 }
 if (atype != 'Waveform') {
 ofile <- paste(gsub(".wav","",file.path(outdir,basename(fullfile))),'_',atype,'_',N,'samples',winname,'Window_',round(r*100),'PercentOverlap.csv',sep = "")
 write.table(A,file = ofile,row.names=FALSE,quote=FALSE,col.names=FALSE,sep=",")
+
+ofile2 <- paste(gsub(".wav","",file.path(outdir,basename(fullfile))),'_',atype,'_',N,'samples',winname,'Window_',round(r*100),'PercentOverlap.rds',sep = "")
+saveRDS(A, file= ofile2)
 }
 #if (disppar == 1){cat('done in',(proc.time()-twrite)[3],'s.\n')}
 }
