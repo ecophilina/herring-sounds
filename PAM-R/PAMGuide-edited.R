@@ -57,7 +57,8 @@ PAMGuide <- function(...,
                      outwrite = 0,
                      disppar = 1,
                      welch = "",
-                     chunksize = "",
+                     tones = F, # T if calibration tones need to be clipped from start of each file
+                     chunksize = "", # only works if tones = F
                      linlog = "Log") {
   graphics.off() # close plot windows
   aid <- 0 # reset metadata code
@@ -162,7 +163,7 @@ PAMGuide <- function(...,
 
   ## Read input file------------------------------------------------------------------
 
-  if (chunksize == "") {
+  if (chunksize == ""|tones==T) { # makes sure you can't use multiple chunks if you have tones that need clipping
     nchunks <- 1 # if loading whole file, nchunks = 1
   } else if (chunksize != "") { # if loading file in stages
     nchunks <- ceiling(xl / (Fs * as.numeric(chunksize))) # number of chunks of length chunksize in file
@@ -172,7 +173,12 @@ PAMGuide <- function(...,
     if (nchunks == 1) { # if loading whole file at once
       t1 <- proc.time() # start timer
       cat("Loading input file... ")
-      xbit <- readWave(fullfile) # read file
+      
+      if(tones){
+      xbit <- readWave(fullfile, from = Fs * 2.8) # read file with tones clipped 
+      } else {
+      xbit <- readWave(fullfile) # read file without tones
+      }
       cat("done in", (proc.time() - t1)[3], "s.
 ")
       xbit <- xbit@left / (2^(Nbit - 1)) # convert to full scale (+/- 1) via bit depth

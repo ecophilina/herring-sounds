@@ -40,7 +40,7 @@ library(tuneR) # load tuneR package
 
 ## Begin PAMGuide_Meta---------------------------------------------------------
 
-PAMGuide_Meta <- function(fullfile, ..., atype = "PSD", plottype = "Both", envi = "Air", calib = 0, ctype = "TS", Si = -159, Mh = -36, G = 0, vADC = 1.414, r = 50, N = Fs, winname = "Hann", lcut = Fs / N, hcut = Fs / 2, timestring = "", outdir = dirname(fullfile), outwrite = 0, disppar = 1, welch = "", chunksize = "", linlog = "Log") {
+PAMGuide_Meta <- function(fullfile, ..., atype = "PSD", plottype = "Both", envi = "Air", calib = 0, ctype = "TS", Si = -159, Mh = -36, G = 0, vADC = 1.414, r = 50, N = Fs, winname = "Hann", lcut = Fs / N, hcut = Fs / 2, timestring = "", outdir = dirname(fullfile), outwrite = 0, disppar = 1, welch = "", tones = F, chunksize = "", linlog = "Log") {
   graphics.off() # close plot windows
   aid <- 0 # reset metadata code
   if (calib == 0) {
@@ -139,7 +139,7 @@ PAMGuide_Meta <- function(fullfile, ..., atype = "PSD", plottype = "Both", envi 
 
   ## Read input file------------------------------------------------------------------
 
-  if (chunksize == "") {
+  if (chunksize == ""|tones==T) { # makes sure you can't use multiple chunks if you have tones that need clipping
     nchunks <- 1
   } else if (chunksize != "") {
     nchunks <- ceiling(xl / (Fs * as.numeric(chunksize))) # number of chunks of length chunksize in file
@@ -149,7 +149,11 @@ PAMGuide_Meta <- function(fullfile, ..., atype = "PSD", plottype = "Both", envi 
     if (nchunks == 1) {
       # t1=proc.time()									#start timer
       # cat('Loading input file... ')
-      xbit <- readWave(fullfile) # read file
+      if(tones){
+        xbit <- readWave(fullfile, from = Fs * 2.8) # read file with tones clipped 
+      } else {
+        xbit <- readWave(fullfile) # read file without tones
+      }
       # cat('done in',(proc.time()-t1)[3],'s.\n')
       xbit <- xbit@left / (2^(Nbit - 1)) # convert to full scale (+/- 1) via bit depth
     } else if (nchunks > 1) {
