@@ -15,8 +15,13 @@ source('PAM-R/Viewer.R')
 # get the calibration number from the ocean instruments site
 # http://oceaninstruments.azurewebsites.net/App/#/%23
 
-prefix <- "5042"
+# for denman island spawning data
+file_prefix <- "5042"
 calib_value <- -176.2
+
+# for 2018 data in qualicum beach or false bay area
+file_prefix <- "67391491"
+calib_value <- -172.8
 
 # # HERRING SOUND NOTES
 # # described in Wilson et al. 2004 as stereotyped bursts of 7–65 pulses (mean of 32) 
@@ -51,12 +56,12 @@ set_lcut <- 20 # seems to be the extent of low band in data
 # set_welch <- 40 # 20 sec time resolution
 set_welch <- 120 # 1 min time resolution
 
-# dir.create(file.path("data", prefix))
+# dir.create(file.path("data", file_prefix))
 if (set_welch == ""){welch_lab <- "all" } else {welch_lab <- set_welch/2}
-dir.create(file.path("data", paste0(prefix,"-",  welch_lab, "s")))
-dir.create(file.path("data", paste0(prefix, "-meta-", welch_lab, "s")))
+dir.create(file.path("data", paste0(file_prefix,"-",  welch_lab, "s")))
+dir.create(file.path("data", paste0(file_prefix, "-meta-", welch_lab, "s")))
 ## and another level if changing lcut from 20 
-# dir.create(file.path("data", paste0(prefix, "-tres-", welch_lab), paste0("lcut-", set_lcut)))
+# dir.create(file.path("data", paste0(file_prefix, "-tres-", welch_lab), paste0("lcut-", set_lcut)))
 
 
 # calling PAMGuide to analyze a single fine
@@ -72,8 +77,8 @@ PAMGuide(
   # hcut = 24000,# high frequency cut off on Hz default is max recorded
   welch = set_welch,# assuming default of 50% overlap, this is the # seconds x2
   plottype = "none",# tells it whether or not to plot the output
-  timestring = paste0(prefix, ".%y%m%d%H%M%S.wav"),# for time stamped data - change the prefix to match the soundtrap used
-  outdir = here::here("data", paste0(prefix, "-", welch_lab, "s")# , paste0("lcut-", set_lcut)
+  timestring = paste0(file_prefix, ".%y%m%d%H%M%S.wav"),# for time stamped data - change the prefix to match the soundtrap used
+  outdir = here::here("data", paste0(file_prefix, "-", welch_lab, "s")# , paste0("lcut-", set_lcut)
     )# output directory within project folder
 )
 
@@ -94,8 +99,8 @@ PAMMeta(
   # hcut = 24000,# high frequency cut off on Hz
   welch = set_welch,# assuming default of 50% overlap, this is the # seconds x2
   plottype = "none",# tells it whether or not to plot the output
-  timestring = paste0(prefix, ".%y%m%d%H%M%S.wav"),
-  # outdir = here::here("data", paste0(prefix, "-meta-", welch_lab, "s")#, paste0("lcut-", set_lcut)
+  timestring = paste0(file_prefix, ".%y%m%d%H%M%S.wav"),
+  # outdir = here::here("data", paste0(file_prefix, "-meta-", welch_lab, "s")#, paste0("lcut-", set_lcut)
   #   )
 )
 
