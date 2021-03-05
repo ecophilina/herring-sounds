@@ -68,7 +68,11 @@ PAMGuide_Meta <- function(fullfile, ..., atype = "PSD", plottype = "Both", envi 
   ## Read time stamp data if provided-----------------------------------------
 
   if (timestring != "") {
-    tstamp <- as.POSIXct(strptime(ifile, timestring), origin = "1970-01-01")
+    if(tones){
+      tstamp <- as.POSIXct(strptime(ifile, timestring), origin = "1970-01-01") + 3 
+    } else {
+      tstamp <- as.POSIXct(strptime(ifile, timestring), origin = "1970-01-01") 
+    }
     if (disppar == 1) {
       cat("Time stamp start time: ", format(tstamp), " 
 ")
@@ -150,7 +154,7 @@ PAMGuide_Meta <- function(fullfile, ..., atype = "PSD", plottype = "Both", envi 
       # t1=proc.time()									#start timer
       # cat('Loading input file... ')
       if(tones){
-        xbit <- readWave(fullfile, from = Fs * 2.8) # read file with tones clipped 
+        xbit <- readWave(fullfile, from = Fs * 3) # read file with tones clipped 
       } else {
         xbit <- readWave(fullfile) # read file without tones
       }
