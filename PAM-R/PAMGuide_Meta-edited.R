@@ -70,7 +70,8 @@ PAMGuide_Meta <- function(fullfile, ..., atype = "PSD", plottype = "Both", envi 
   if (timestring != "") {
     tstamp <- as.POSIXct(strptime(ifile, timestring), origin = "1970-01-01")
     if (disppar == 1) {
-      cat("Time stamp start time: ", format(tstamp), "")
+      cat("Time stamp start time: ", format(tstamp), " 
+")
     }
   }
   else {
@@ -81,42 +82,58 @@ PAMGuide_Meta <- function(fullfile, ..., atype = "PSD", plottype = "Both", envi 
   ## Display user-defined settings------------------------------------------
 
   if (disppar == 1) {
-    cat("Analysis type:", atype, "")
-    cat("Plot type:", plottype, "")
+    cat("Analysis type:", atype, " 
+")
+    cat("Plot type:", plottype, " 
+")
     if (calib == 1) {
       if (ctype == "EE") {
-        cat("End-to-end system sensitivity =", sprintf("%.01f", Si), "dB")
+        cat("End-to-end system sensitivity =", sprintf("%.01f", Si), "dB 
+")
         if (envi == "Wat") {
-          cat("In-air measurement")
+          cat("In-air measurement 
+")
         }
         if (envi == "Wat") {
-          cat("Underwater measurement")
+          cat("Underwater measurement 
+")
         }
       }
       if (ctype == "RC") {
-        cat("System sensitivity of recorder (excluding transducer) =", sprintf("%.01f", Si), "dB")
+        cat("System sensitivity of recorder (excluding transducer) =", sprintf("%.01f", Si), "dB
+")
       }
       if (ctype == "TS" || ctype == "RC") {
         if (envi == "Air") {
-          cat("In-air measurement")
-          cat("Microphone sensitivity:", Mh, "dB re 1 V/Pa")
+          cat("In-air measurement 
+")
+          cat("Microphone sensitivity:", Mh, "dB re 1 V/Pa 
+")
           Mh <- Mh - 120
         } # convert to dB re 1 V/uPa
         if (envi == "Wat") {
-          cat("Underwater measurement")
-          cat("Hydrophone sensitivity:", Mh, "dB re 1 V/uPa")
+          cat("Underwater measurement 
+")
+          cat("Hydrophone sensitivity:", Mh, "dB re 1 V/uPa 
+")
         }
       }
       if (ctype == "TS") {
-        cat("Preamplifier gain:", G, "dB")
-        cat("ADC peak voltage:", vADC, "V")
+        cat("Preamplifier gain:", G, "dB 
+")
+        cat("ADC peak voltage:", vADC, "V 
+")
       }
     } else {
-      cat("Uncalibrated analysis. Output in relative units.")
+      cat("Uncalibrated analysis. Output in relative units. 
+")
     }
-    cat("Time segment length:", N, "samples =", N / Fs, "s")
-    cat("Window function:", winname, "")
-    cat("Window overlap:", r, "%")
+    cat("Time segment length:", N, "samples =", N / Fs, "s
+")
+    cat("Window function:", winname, " 
+")
+    cat("Window overlap:", r, "% 
+")
   }
   r <- r / 100
 
@@ -171,7 +188,8 @@ PAMGuide_Meta <- function(fullfile, ..., atype = "PSD", plottype = "Both", envi 
       }
 
       if (disppar == 1) {
-        cat("System sensitivity correction factor, S = ", sprintf("%.01f", S), " dB")
+        cat("System sensitivity correction factor, S = ", sprintf("%.01f", S), " dB
+")
       }
     } else {
       S <- 0
@@ -438,12 +456,16 @@ New time resolution =", welch, "(Welch factor) x", N / Fs, "s (time segment leng
 
     if (atype == "PSD") { # spectrogram
       if (tstamp != "") {
-        image(t, f, t(a), ylim = c(lcut, hcut), yaxt = "n", log = "y", col = jet.colors(512), 
-          main = paste("PSD spectrogram of ", ifile), xlab = "Time", ylab = "Frequency [ Hz ]", xaxt = "n")
+        image(t, f, t(a),
+          ylim = c(lcut, hcut), yaxt = "n", log = "y", col = jet.colors(512),
+          main = paste("PSD spectrogram of ", ifile), xlab = "Time", ylab = "Frequency [ Hz ]", xaxt = "n"
+        )
       }
       else {
-        image(t, f, t(a), ylim = c(lcut, hcut), yaxt = "n", log = "y", col = jet.colors(512), 
-          main = paste("PSD spectrogram of ", ifile), xlab = "Time [ s ]", ylab = "Frequency [ Hz ]")
+        image(t, f, t(a),
+          ylim = c(lcut, hcut), yaxt = "n", log = "y", col = jet.colors(512),
+          main = paste("PSD spectrogram of ", ifile), xlab = "Time [ s ]", ylab = "Frequency [ Hz ]"
+        )
       }
       y1 <- floor(log10(range(f)))
       pow <- seq(y1[1], y1[2] + 1)
@@ -456,12 +478,16 @@ New time resolution =", welch, "(Welch factor) x", N / Fs, "s (time segment leng
 
     if (atype == "PowerSpec") { # spectrogram
       if (tstamp != "") {
-        image(t, f, t(a), ylim = c(lcut, hcut), yaxt = "n", log = "y", col = jet.colors(512), 
-          main = paste("Power spectrum spectrogram of ", ifile), xlab = "Time", ylab = "Frequency [ Hz ]", xaxt = "n")
+        image(t, f, t(a),
+          ylim = c(lcut, hcut), yaxt = "n", log = "y", col = jet.colors(512),
+          main = paste("Power spectrum spectrogram of ", ifile), xlab = "Time", ylab = "Frequency [ Hz ]", xaxt = "n"
+        )
       }
       else {
-        image(t, f, t(a), ylim = c(lcut, hcut), yaxt = "n", log = "y", col = jet.colors(512), 
-          main = paste("Power spectrum spectrogram of ", ifile), xlab = "Time [ s ]", ylab = "Frequency [ Hz ]")
+        image(t, f, t(a),
+          ylim = c(lcut, hcut), yaxt = "n", log = "y", col = jet.colors(512),
+          main = paste("Power spectrum spectrogram of ", ifile), xlab = "Time [ s ]", ylab = "Frequency [ Hz ]"
+        )
       }
       y1 <- floor(log10(range(f)))
       pow <- seq(y1[1], y1[2] + 1)
@@ -475,12 +501,16 @@ New time resolution =", welch, "(Welch factor) x", N / Fs, "s (time segment leng
 
     if (atype == "TOL") {
       if (tstamp != "") {
-        image(t, fc, t(a), ylim = c(min(fb), fb[nfc + 1]), yaxt = "n", log = "y", col = jet.colors(512), 
-          main = paste("TOL spectrogram of ", ifile), xlab = "Time", ylab = "Frequency [ Hz ]", xaxt = "n")
+        image(t, fc, t(a),
+          ylim = c(min(fb), fb[nfc + 1]), yaxt = "n", log = "y", col = jet.colors(512),
+          main = paste("TOL spectrogram of ", ifile), xlab = "Time", ylab = "Frequency [ Hz ]", xaxt = "n"
+        )
       }
       else {
-        image(t, fc, t(a), ylim = c(min(fb), fb[nfc + 1]), yaxt = "n", log = "y", col = jet.colors(512), 
-          main = paste("TOL spectrogram of ", ifile), xlab = "Time [ s ]", ylab = "Frequency [ Hz ]")
+        image(t, fc, t(a),
+          ylim = c(min(fb), fb[nfc + 1]), yaxt = "n", log = "y", col = jet.colors(512),
+          main = paste("TOL spectrogram of ", ifile), xlab = "Time [ s ]", ylab = "Frequency [ Hz ]"
+        )
       }
       y1 <- floor(log10(range(fc)))
       pow <- seq(y1[1], y1[2] + 1)
@@ -544,16 +574,21 @@ New time resolution =", welch, "(Welch factor) x", N / Fs, "s (time segment leng
   ## Write output array to CSV file if selected----------------------
 
   A <- data.matrix(A, rownames.force = NA)
+# browser()
   if (outwrite == 1) {
     # if (disppar == 1){cat('Writing output file...')
     # twrite <- proc.time()}
     if (atype == "Waveform") {
-      ofile <- paste(gsub(".wav", "", file.path(outdir, basename(fullfile))), "_", atype, ".csv", sep = "")
-      write.table(A, file = ofile, row.names = FALSE, quote = FALSE, col.names = FALSE, sep = ",")
+      # ofile <- paste(gsub(".wav", "", file.path(outdir, basename(fullfile))), "_", atype, ".csv", sep = "")
+      # write.table(A, file = ofile, row.names = FALSE, quote = FALSE, col.names = FALSE, sep = ",")
+      ofile <- paste(gsub(".wav", "", file.path(outdir, basename(fullfile))), "_", atype, ".rds", sep = "")
+      saveRDS(A, file = ofile)
     }
     if (atype != "Waveform") {
-      ofile <- paste(gsub(".wav", "", file.path(outdir, basename(fullfile))), "_", atype, "_", N, "samples", winname, "Window_", round(r * 100), "PercentOverlap.csv", sep = "")
-      write.table(A, file = ofile, row.names = FALSE, quote = FALSE, col.names = FALSE, sep = ",")
+      # ofile <- paste(gsub(".wav", "", file.path(outdir, basename(fullfile))), "_", atype, "_", N, "samples", winname, "Window_", round(r * 100), "PercentOverlap.csv", sep = "")
+      # write.table(A, file = ofile, row.names = FALSE, quote = FALSE, col.names = FALSE, sep = ",")
+      ofile <- paste(gsub(".wav", "", file.path(outdir, basename(fullfile))), "_", atype, "_", N, "samples", winname, "Window_", round(r * 100), "PercentOverlap.rds", sep = "")
+      saveRDS(A, file = ofile)
     }
     # if (disppar == 1){cat('done in',(proc.time()-twrite)[3],'s.\n')}
   }
@@ -589,18 +624,20 @@ New time resolution =", welch, "(Welch factor) x", N / Fs, "s (time segment leng
 
           # Plot data
           d[which(d > 0.05)] <- 0.05 # saturate colour scale at PD = 0.05
-          image(f, dbvec[1:length(dbvec) - 1] - hind / 2, d, 
-          zlim <- c(min(d[which(d > 0)]), 0.05), log = "x", xaxt = "n", col = jet.colors(2^12), 
-          xlim <- c(min(f), max(f)), 
-          main = paste("Noise level statistics for ", ifile, "
-Window length = ", N / Fs, " s = ", N, " samples"), 
-            xlab = "Frequency [ Hz ]", ylab = "")
+          image(f, dbvec[1:length(dbvec) - 1] - hind / 2, d,
+            zlim <- c(min(d[which(d > 0)]), 0.05),
+            log = "x", xaxt = "n", col = jet.colors(2^12),
+            xlim <- c(min(f), max(f)),
+            main = paste("Noise level statistics for ", ifile, "Window length = ", N / Fs, " s = ", N, " samples"),
+            xlab = "Frequency [ Hz ]", ylab = ""
+          )
         }
         if (M < 1000) {
-          plot(f, RMSlevel, type = "n", log = "x", xaxt = "n", 
-          main = paste("Noise level statistics for ", ifile, "
-Window length = ", N / Fs, " s = ", N, " samples"), 
-            xlab = "Frequency [ Hz ]", ylab = "", ylim = c(mindB, maxdB))
+          plot(f, RMSlevel,
+            type = "n", log = "x", xaxt = "n",
+            main = paste("Noise level statistics for ", ifile, "Window length = ", N / Fs, " s = ", N, " samples"),
+            xlab = "Frequency [ Hz ]", ylab = "", ylim = c(mindB, maxdB)
+          )
         }
         lines(f, p[5, ])
         lines(f, p[4, ])
@@ -609,12 +646,14 @@ Window length = ", N / Fs, " s = ", N, " samples"),
         lines(f, p[1, ])
         lines(f, RMSlevel, col = "magenta")
         if (M < 1000) {
-          legend("bottomleft", c("99%", "95%", "50%", "5%", "1%", "RMS level"), 
-            lty = c(1), lwd = c(1), col = c("black", "black", "black", "black", "black", "magenta"))
+          legend("bottomleft", c("99%", "95%", "50%", "5%", "1%", "RMS level"),
+            lty = c(1), lwd = c(1), col = c("black", "black", "black", "black", "black", "magenta")
+          )
         }
         if (M >= 1000) {
-          legend("bottomleft", c("SPD", "99%", "95%", "50%", "5%", "1%", "RMS level"), 
-            lty = c(1), lwd = c(1), col = c("blue", "black", "black", "black", "black", "black", "magenta"))
+          legend("bottomleft", c("SPD", "99%", "95%", "50%", "5%", "1%", "RMS level"),
+            lty = c(1), lwd = c(1), col = c("blue", "black", "black", "black", "black", "black", "magenta")
+          )
         }
         y1 <- floor(log10(range(f)))
         pow <- seq(y1[1], y1[2] + 1)

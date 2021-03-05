@@ -394,7 +394,8 @@ Viewer <- function(..., plottype = "Both", fullfile = "", ifile = "", linlog = "
           cat("done in", (proc.time() - tstat)[3], "s.")
           
           if (M < 1000 & atype != "Broadband") {
-            cat(" Too few time segments (M = ", M, ", i.e. <1000) for SPD analysis: for SPD, use a longer file or shorter time segment length (N).")
+            cat(" Too few time segments (M = ", M, ", i.e. <1000) for SPD analysis: for SPD, use a longer file or shorter time segment length (N).
+")
           }
         }
       }
@@ -433,16 +434,24 @@ Viewer <- function(..., plottype = "Both", fullfile = "", ifile = "", linlog = "
     SEL <- 10 * log10(tind * sum(10^(a / 10)))
 
     if (calib == 1) {
-      cat("RMS level (mean SPL) = ", sprintf("%.1f", RMSlev), "dB re", pref, "uPa")
-      cat("Median SPL = ", sprintf("%.1f", medlev), "dB re", pref, "uPa")
-      cat("Mode SPL = ", sprintf("%.1f", modelev), "dB re", pref, "uPa")
-      cat("SEL = ", sprintf("%.1f", SEL), "dB re", pref, "uPa^2 s. Note: for SEL measurements, set r = 0 (window overlap) and use default N.")
+      cat("RMS level (mean SPL) = ", sprintf("%.1f", RMSlev), "dB re", pref, "uPa
+")
+      cat("Median SPL = ", sprintf("%.1f", medlev), "dB re", pref, "uPa
+")
+      cat("Mode SPL = ", sprintf("%.1f", modelev), "dB re", pref, "uPa
+")
+      cat("SEL = ", sprintf("%.1f", SEL), "dB re", pref, "uPa^2 s. Note: for SEL measurements, set r = 0 (window overlap) and use default N.
+")
     } else {
-      cat("Relative normalised RMS level (mean SPL) = ", sprintf("%.1f", RMSlev), "dB")
-      cat("Relative normalised median SPL = ", sprintf("%.1f", medlev), "dB")
-      cat("Relative normalised mode SPL = ", sprintf("%.1f", modelev), "dB")
+      cat("Relative normalised RMS level (mean SPL) = ", sprintf("%.1f", RMSlev), "dB
+")
+      cat("Relative normalised median SPL = ", sprintf("%.1f", medlev), "dB
+")
+      cat("Relative normalised mode SPL = ", sprintf("%.1f", modelev), "dB
+")
       cat("Relative normalised SEL = ", sprintf("%.1f", SEL), 
-      "dB. Note: for SEL measurements, set r = 0 (window overlap) and use default N.")
+      "dB. Note: for SEL measurements, set r = 0 (window overlap) and use default N.
+")
     }
     if (plottype == "Stats" | plottype == "Both") {
       lines(c(RMSlev, RMSlev), c(0, 1), col = "magenta")

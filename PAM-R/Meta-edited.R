@@ -52,7 +52,7 @@ PAMMeta <- function(..., atype = "PSD", plottype = "Both", envi = "Air", calib =
   } else {
     calstring <- "Rel"
   }
-  newdir <- paste("Meta_", basename(dirname(fullfile)), "_", atype, "_", calstring, "_", N, "pt", winname, "Window", "_", r * 100, "pcOlap", sep = "")
+  newdir <- paste("Meta_", basename(dirname(fullfile)), "_", atype, "_", calstring, "_", N, "pt", winname, "Window", "_", r, "pcOlap", sep = "")
   newpath <- file.path(dirname(fullfile), newdir)
   suppressWarnings(dir.create(newpath))
 
@@ -87,13 +87,14 @@ PAMMeta <- function(..., atype = "PSD", plottype = "Both", envi = "Air", calib =
     # concatenate arrays
     else {
       conkcomp == 0
-      cat("Sample rates of WAV files in selected folder not equal. Cannot concatenate.")
+      cat("Sample rates of WAV files in selected folder not equal. Cannot concatenate.
+")
     }
     cat("File ", i, "/", nf, ": ", basename(nowfile), " analysed in ", (proc.time() - tana)[3], " s
 ", sep = "")
   }
-  ofile <- paste(gsub(".csv", "", file.path(dirname(fullfile), "Conk")), "_", basename(dirname(fullfile)), "_", calstring, "_", atype, "_", N, "pt", winname, "Window_", round(r * 100), "pcOlap.csv", sep = "")
-  ofile2 <- paste(gsub(".csv", "", file.path(dirname(fullfile), "Conk")), "_", basename(dirname(fullfile)), "_", calstring, "_", atype, "_", N, "pt", winname, "Window_", round(r * 100), "pcOlap.rds", sep = "")
+  # ofile <- paste(gsub(".csv", "", file.path(dirname(fullfile), "Conk")), "_", basename(dirname(fullfile)), "_", calstring, "_", atype, "_", N, "pt", winname, "Window_", round(r * 100), "pcOlap.csv", sep = "")
+  ofile <- paste(gsub(".rds", "", file.path(dirname(fullfile), "Conk")), "_", basename(dirname(fullfile)), "_", calstring, "_", atype, "_", N, "pt", winname, "Window_", round(r * 100), "pcOlap.rds", sep = "")
   cat("Analysis complete in ", (proc.time() - tglo)[3], " s
 ", sep = "")
 
@@ -106,8 +107,8 @@ PAMMeta <- function(..., atype = "PSD", plottype = "Both", envi = "Air", calib =
 
   cat("Writing concatenated output array...")
   twri <- proc.time()
-  write.table(conc, file = ofile, row.names = FALSE, col.names = FALSE, quote = FALSE, sep = ",", dec = ".")
-  saveRDS(conc, file = ofile2)
+  # write.table(conc, file = ofile, row.names = FALSE, col.names = FALSE, quote = FALSE, sep = ",", dec = ".")
+  saveRDS(conc, file = ofile)
   cat("done in ", (proc.time() - twri)[3], " s
 ", sep = "")
 }
