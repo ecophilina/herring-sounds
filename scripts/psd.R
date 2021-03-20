@@ -1,6 +1,5 @@
 # This script starts data processing for the study looking at 
 # acoustic signals of herring spawning 
-
 # @knitr loadpackages
 # First load functions and packages
 if(!require(tidyverse))install.packages("tidyverse");library(tidyverse)
@@ -99,9 +98,9 @@ PAMMeta(
   # hcut = 24000,# high frequency cut off on Hz
   welch = set_welch,# assuming default of 50% overlap, this is the # seconds x2
   plottype = "none",# tells it whether or not to plot the output
-  timestring = paste0(file_prefix, ".%y%m%d%H%M%S.wav"),
   # outdir = here::here("data", paste0(file_prefix, "-meta-", welch_lab, "s")#, paste0("lcut-", set_lcut)
-  #   )
+  #   ),
+  timestring = paste0(file_prefix, ".%y%m%d%H%M%S.wav")
 )
 
 # this will bring in a dataset and plot it up for you
@@ -152,12 +151,22 @@ d3 <- d2 %>%
     sec=second(DateTime),
     date=ymd(paste(yr,m,d)),
     t=as.POSIXct(datetime, origin = "1970-01-01"),
-    daily_min=(local_time(DateTime, units = "mins"))
+    daily_min=(local_time(DateTime, units = "mins")),
+    day_hr = paste0(date, "-", hr) 
   ) %>% select(-DateTime)
 
 
+
+# make ggplot version of Viewer() output fig
+jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
+
+
+# for single continuous sample
 # sets time variable to appropriate scale 
-tdiff <- max(d3$t) - min(d3$t) # define time format for x-axis of time plot depending on scale
+
+ds <- filter(d3, date == min(d3$date))
+
+tdiff <- max(ds$t) - min(ds$t) # define time format for x-axis of time plot depending on scale
 if (tdiff < 10) {
   tform <- "%H:%M:%S:%OS3"
 } else if (tdiff > 10 & tdiff < 86400) {
@@ -167,27 +176,90 @@ if (tdiff < 10) {
 } else if (tdiff > 86400 * 7) {
   tform <- "%d %b %y"
 }
-d3$time <- as.POSIXct(d3$t,format = tform)
+ds$time <- as.POSIXct(ds$t, format = tform)
 
-# or simply use time elapsed
-# don't use if stitching together days
-d3$time_elapsed <- as.double(d3$daily_min - min(d3$daily_min))
-d3$day_hr <- paste0(d3$date, "-", d3$hr) 
+# or simply use time elapsed 
+# d3$time_elapsed <- as.factor(d3$daily_min - min(d3$daily_min))
 
-# make ggplot version of Viewer() output fig
-jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
 
-d3 %>% filter(freq_kHz > 0.3 & freq_kHz < 24) %>%
-ggplot(aes(time_elapsed, freq_kHz)) + 
+#each 15 min sample in separate facet
+ds %>% filter(freq_kHz > 0.3 & freq_kHz < 24) %>%
+  ggplot(aes(time, freq_kHz)) + 
   scale_y_log10(expand = c(0,0)) + annotation_logticks(sides = "l") +
-  scale_x_continuous(expand = c(0,0)) +
+  # scale_x_continuous(expand = c(0,0)) +
   geom_rect(aes(
-    xmin=time_elapsed, xmax=time_elapsed+1,
+    xmin=(time), xmax=(time)+1,
     ymin=freq_kHz-0.01, ymax=freq_kHz+0.01, 
     fill=PSD)) +
   # geom_tile(aes(colour = PSD)) +
   scale_fill_gradientn(colours = jet.colors(512)) +
-  facet_wrap(~day_hr, scales = "free_x") +
+  # # geom_hline(yintercept = 1.7 ) + # 1.8
+  # annotate("text", x = 3, y = 1.8, label = "herring whistles") +
+  geom_hline(yintercept = 2) +
+  # geom_hline(yintercept = 2.6 ) + # 1.8
+  annotate("text", x = 3, y = 3, label = "herring sounds") +
+  # geom_hline(yintercept = 3.8) +
+  ylab("Frequency (kHz)") +
+  xlab("Time") +
+  ggsidekick::theme_sleek() 
+
+
+# if faceting non-continuous samples that all start at 0 and 30 min past hr
+
+d3$group <- d3$day_hr
+d4 <- d3 %>% group_by(group) %>% mutate(
+  halfhr = ifelse(min<15, ".0", ".5"),
+  group = paste0(day_hr, halfhr),
+  time_elapsed = ifelse(min<16, min - min(min), min - 30)
+)
+
+
+#each 15 min sample in separate facet
+d4 %>% filter(freq_kHz > 0.3 & freq_kHz < 24) %>%
+  ggplot(aes(time_elapsed, freq_kHz)) + 
+  scale_y_log10(expand = c(0,0)) + annotation_logticks(sides = "l") +
+  # scale_x_continuous(expand = c(0,0)) +
+  scale_x_discrete() +
+  geom_rect(aes(
+    xmin=as.numeric(time_elapsed), xmax=as.numeric(time_elapsed)+1,
+    ymin=freq_kHz-0.01, ymax=freq_kHz+0.01, 
+    fill=PSD)) +
+  scale_fill_gradientn(colours = jet.colors(512)) +
+  # facet_wrap(~day_hr, scales = "free_x") +
+  facet_wrap(~group, scales = "free") +
+  # # geom_hline(yintercept = 1.7 ) + # 1.8
+  # # annotate("text", x = 3, y = 1.8, label = "herring whistles") +
+  # geom_hline(yintercept = 2) +
+  # # geom_hline(yintercept = 2.6 ) + # 1.8
+  # annotate("text", x = 3, y = 3, label = "herring sound range") +
+  # # geom_hline(yintercept = 3.8) +
+  ylab("Frequency (kHz)") +
+  xlab("Time") +
+  ggsidekick::theme_sleek() 
+
+
+# factoring time to remove missing periods
+
+d3$group <- d3$day_hr
+# d3$group <- d3$d # didn't work with big gaps... might with small ones
+
+d5 <- d3 %>% group_by(group) %>% mutate(
+  time_elapsed = as.factor(t - min(t))
+)
+
+
+d5 %>% filter(freq_kHz > 0.3 & freq_kHz < 24) %>%
+ggplot(aes(time_elapsed, freq_kHz)) + 
+  scale_y_log10(expand = c(0,0)) + annotation_logticks(sides = "l") +
+  # scale_x_continuous(expand = c(0,0)) +
+  scale_x_discrete() +
+  geom_rect(aes(
+    xmin=as.numeric(time_elapsed), xmax=as.numeric(time_elapsed)+1,
+    ymin=freq_kHz-0.01, ymax=freq_kHz+0.01, 
+    fill=PSD)) +
+  scale_fill_gradientn(colours = jet.colors(512)) +
+  # facet_wrap(~day_hr, scales = "free_x") +
+  facet_wrap(~group, scales = "free") +
   # # geom_hline(yintercept = 1.7 ) + # 1.8
   # # annotate("text", x = 3, y = 1.8, label = "herring whistles") +
   # geom_hline(yintercept = 2) +
