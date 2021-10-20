@@ -139,12 +139,11 @@ sample_counts_15min <- dat2 %>% group_by(site) %>% summarise(n = n())
 
 sample_w_pinnipeds <- alldat %>% filter(pinniped > 0) %>% group_by(site) %>% summarise(n = n())
 sample_w_gulls <- alldat %>% filter(gull > 0) %>% group_by(site) %>% summarise(n = n())
-
-
 # sample_w_cetacean <- alldat %>% filter(cetacean > 0) %>% group_by(site) %>% summarise(n = n()) # no cetaceans
 
-
-ggplot(dat2, aes(daysintosample, herring.hs, colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
+# other possible herring sounds
+sample_1_he_frt <- dat %>% filter(herring.frt > 0) 
+sample_1_he_p <- dat %>% filter(herring.p > 0) 
 
 
 ## boat noise vs. herring activity
@@ -188,14 +187,34 @@ alldat %>% group_by(site, fish.knock, herring.hs) %>% summarise(n = n())%>%
   ggplot(aes(fish.knock, herring.hs, size = n, colour = site)) + 
   geom_point(alpha = 0.75) +facet_wrap(~site) + theme_sleek()
 
-## preliminary heat maps
-# ggplot(dat, aes(time, day, fill = herring.hs)) + geom_tile(width=0.015, height=1) + facet_wrap(~site, nrow = 4, scales = "free") + theme_sleek()
+
+ggplot(alldat, aes(daysintosample, herring.hs, colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
+
+
+## preliminary heat maps for 1 min data
+
+ggplot(dat, aes(day, time, fill = herring.hs, alpha = -boat)) + geom_tile(width=1, height=0.02) + 
+  scale_fill_viridis_c("Herring\nScore") + 
+  scale_alpha_continuous(guide = "none", range = c(0.5, 1)) + 
+  facet_wrap(~site, ncol = 4, scales = "free") + theme_sleek() + theme(panel.background = element_rect(fill = "black"))
+
+ggplot(data = filter(dat, herring.hs > 0), aes(day, time, fill = herring.hs)) + 
+  ## these seem to have only been used in the trial 2020 Neck Pt data
+  geom_tile(data = filter(dat, herring.p > 0), aes(day, time, fill = herring.p), width=1, height=0.02) +
+  geom_tile(data = filter(dat, herring.frt > 0), aes(day, time, fill = herring.frt),width=1, height=0.02) +
+  geom_tile(width=1, height=0.02) + 
+  geom_tile(data = filter(dat), aes(day, time, alpha = boat), fill = "purple", width=1, height=0.02) +
+  scale_fill_viridis_c("Herring\nScore", begin = 0.4) + 
+  scale_alpha_continuous(guide = "none", range = c(0.001, 0.3)) + 
+  facet_wrap(~site, ncol = 4, scales = "free") + theme_sleek() + theme(panel.background = element_rect(fill = "black"))
+
+
 # ggplot(dat1, aes(time, day, fill = herring.frt)) + geom_tile(width=0.5, height=1) + facet_wrap(~site, nrow = 3, scales = "free") + theme_sleek()
 # 
 # ggplot(dat2, aes(time, day, fill = herring.hs)) + geom_tile(width=0.5, height=1) + facet_wrap(~site, nrow = 3, scales = "free") + theme_sleek()
 
 
-# heat maps for all data
+# heat maps for all data pooled to 15 min
 
 alldat %>% filter(site != "Neck Point (2020)") %>%
 ggplot(aes(day, time, fill = herring.hs, alpha = -boat)) + geom_tile(width=1, height=0.5) + 
@@ -257,7 +276,7 @@ alldat %>% filter(site != "Neck Point (2020)") %>%
   scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
   # add dots for deterrent tones
   geom_point(data = filter(alldat, pinniped != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.75)+
-  geom_point(data = filter(alldat, gull != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.45)+
+  geom_point(data = filter(alldat, gull != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.25)+
   # geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "red", alpha=1, size = 0.15)+
   xlab("Date (March)") + 
   ylab("Pacific Standard Time") +
@@ -266,4 +285,48 @@ alldat %>% filter(site != "Neck Point (2020)") %>%
 
 # ggsave("herring-time-by-day-max.png", height = 5, width = 3)
 ggsave("herring-time-by-day-mean-C.png", height = 3, width = 6)
+
+
+
+
+#### choose example files ####
+
+
+## low boat, high herring
+sample_1_he <- dat %>% filter(herring.hs > 2, boat < 2, waves < 1) 
+
+# denman 5042.200306210002.wav
+# neck   5042.210312230058.wav
+
+
+## high boat, high herring
+# sample_15_he_boat <- alldat %>% filter(herring.hs > 2, boat >= 2, waves < 2) 
+sample_1_he_boat <- dat %>% filter(herring.hs > 2, boat >= 2, waves < 2) 
+
+# denman 5042.200306200002.wav
+# neck   5042.210312060042.wav
+
+
+## low boat, no herring
+sample_15_nothing <- alldat %>% filter(herring.hs == 0, herring.frt == 0, herring.p == 0,
+  # pinniped <1, gull < 1, 
+  boat <= 1.5, waves <= 1.5) 
+
+# denman 5042.200307113002.wav
+# neck   5042.210312113054.wav
+
+
+## high boat, no herring
+sample_15_boat <- alldat %>% filter(herring.hs == 0, herring.frt == 0, herring.p == 0, 
+  waves < 1, rustling < 0.1, splahes < 0.1,
+  boat > 2,  boat <= 3) 
+
+sample_1_boat <- dat %>% filter(herring.hs == 0, herring.frt == 0, herring.p == 0, 
+  invert.snap > 0,
+  waves < 1, rustling < 0.1, splahes < 0.1,
+  boat == 2) 
+
+# denman  5042.200306183002.wav (less intense boat) or 5042.200306093002.wav (more intense boat)
+# neck   	5042.210311200014.wav (less intense boat) or 5042.210311220018.wav (more intense boat)
+
 
