@@ -269,22 +269,25 @@ ggsave("waves-time-by-day-mean.png", height = 3, width = 6)
 
 
 alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(day, time, fill = herring.hs, alpha = -(boat + (waves*0.2)))) + 
-  geom_tile(width=1, height=0.5) + 
-  scale_fill_viridis_c("Herring\nScore", option = "C", end = 0.8) + 
+  ggplot(aes(day, time, fill = herring.hs, alpha = -(boat*1.5 + (waves*0.2)))) + 
+  geom_tile(width=1, height=0.5, colour = NA ) + 
+  scale_fill_viridis_c("Herring\nScore", option = "D", end = 0.95) + 
+  # scale_fill_viridis_c("Herring\nScore", option = "C", end = 0.6) + 
   # fade based on cummulative score for boat and wave noise
-  scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
+  scale_alpha_continuous(guide = "none", range = c(0.1, 1)) + 
   # add dots for deterrent tones
-  geom_point(data = filter(alldat, pinniped != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.75)+
-  geom_point(data = filter(alldat, gull != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.25)+
+  geom_point(data = filter(alldat, (pinniped != 0 | gull != 0 ) & site != "Neck Point (2020)"), aes(size = (pinniped + gull)), colour = "black", alpha=1)+
+  # geom_point(data = filter(alldat, site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.25)+
   # geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "red", alpha=1, size = 0.15)+
+  scale_size_continuous(guide = "none", range = c(0.1, 1)) + 
   xlab("Date (March)") + 
   ylab("Pacific Standard Time") +
   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
 
 # ggsave("herring-time-by-day-max.png", height = 5, width = 3)
-ggsave("herring-time-by-day-mean-C.png", height = 3, width = 6)
+# ggsave("herring-time-by-day-mean-C.png", height = 3, width = 6)
+ggsave("herring-time-by-day-mean-D.pdf", height = 3, width = 6)
 
 
 
