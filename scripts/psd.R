@@ -22,31 +22,31 @@ calib_value <- -176.2
 file_prefix <- "67391491"
 calib_value <- -172.8
 
-# # HERRING SOUND NOTES
-# # described in Wilson et al. 2004 as stereotyped bursts of 7–65 pulses (mean of 32) 
-# # lasting 0.6–7.6 s (mean of 2.6)
-# # pulses are broadband with frequencies from 1.7 to at least 22kHz (study’s frequency ceiling)
-# # 143 dB re1μPa @ 1–1.8 m distance
+# HERRING SOUND NOTES
+# described in Wilson et al. 2004 as stereotyped bursts of 7–65 pulses (mean of 32)
+# lasting 0.6–7.6 s (mean of 2.6)
+# pulses are broadband with frequencies from 1.7 to at least 22kHz (study’s frequency ceiling)
+# 143 dB re1μPa @ 1–1.8 m distance
 # 
-# # Mann et al. 1997
-# # American shad showed the greatest sensitivity to sounds between 0.2 and 0.8 kHz
-# # thought to hear as high as 3-4 kHz? 
+# Mann et al. 1997
+# American shad showed the greatest sensitivity to sounds between 0.2 and 0.8 kHz
+# thought to hear as high as 3-4 kHz?
 # 
-# # Schwarz and Greer 1984 describe
-# # chips heard from colmly schooling fish not when feeding or stratled
-# # chips widest range 1800 to 3200 Hz (most in range of 2600 to 3800)
-# # chip duration 0,5 to 10 sec (mean 3.4 sec)
-# # whistle heard March 6 between 00:30 and 01:30 from a motionless school
-# # hypothesized to be used to maintain proximity to neighbours when schools spread out at night
-# # whistle duration 0.5 - 1.8s (mean 0.9) at 1600 - 2000 Hz range 150 Hz
+# Schwarz and Greer 1984 describe
+# chips heard from colmly schooling fish not when feeding or stratled
+# chips widest range 1800 to 3200 Hz (most in range of 2600 to 3800)
+# chip duration 0,5 to 10 sec (mean 3.4 sec)
+# whistle heard March 6 between 00:30 and 01:30 from a motionless school
+# hypothesized to be used to maintain proximity to neighbours when schools spread out at night
+# whistle duration 0.5 - 1.8s (mean 0.9) at 1600 - 2000 Hz range 150 Hz
 # 
-# # COMMUNITY SOUND NOTES
-# #
-# # Peterson and Bartholomew 1969
-# # female sealion barks appear to peak between 0.5-1.5 kHz
-# # male sealion barks appear to peak < 0.5 kHz
-# # see Foote et al. 2006 and Schusterman and Balliet 1969 for additional spectrograms
+# COMMUNITY SOUND NOTES
 # 
+# Peterson and Bartholomew 1969
+# female sealion barks appear to peak between 0.5-1.5 kHz
+# male sealion barks appear to peak < 0.5 kHz
+# see Foote et al. 2006 and Schusterman and Balliet 1969 for additional spectrograms
+
 
 set_lcut <- 20 # seems to be the extent of low band in data
 # set_welch <- "" # is default of no averaging across time appears to produce 0.5 sec resolution
@@ -85,7 +85,7 @@ PAMGuide(
 # Viewer()
 
 # calling PAMMeta to analyze every file in a folder
-# failed when folder name was "wav-denman-2020" works with just "denman"
+# failed for folder name with - "wav-denman-2020"; works with just "denman" 
 PAMMeta(
   atype = "PSD",# this tells it you want to do power spectral density 
   # atype = "Broadband",# this option is for doing SPL
