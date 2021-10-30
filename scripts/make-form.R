@@ -14,9 +14,6 @@ pathlength <- nchar(mydir) + 1
 
 myfiles <- list.files(path = mydir, pattern = "*.wav", full.names = TRUE)
 
-# d <- as_tibble(myfiles) %>% separate(value,into=c("path","filename"),
-#   sep=c(pathlength), remove=FALSE) %>% separate(value,into=c("path","soundtrap","dot","year","month","day","hr","min","s","e"), sep=c(pathlength,pathlength+4,pathlength+5,pathlength+7,pathlength+9,pathlength+11,pathlength+13,pathlength+15,pathlength+17), remove=FALSE) %>% select(-value, -dot, -e)
-
 d <- as_tibble(myfiles) %>% separate(value,into=c("path","filename"), sep=c(pathlength), remove=FALSE)
 # d2 <- d %>% select(filename)
 
@@ -39,8 +36,13 @@ head(d2)
 # herr.notes - notes on characteristics of herring sounds, specifically ones classified as "p" other	any other sound identifiable (eg. Birds, people, other marine mammals)
 # notes - notes on all other aspects of sound environment
 
-
 write.csv(d2, "data/neckpoint2021_1min_annotation.csv", row.names = F)
+
+d3 <- as_tibble(myfiles) %>% separate(value,into=c("path","filename"),
+  sep=c(pathlength), remove=FALSE) %>% separate(value,into=c("path","soundtrap","dot","year","month","day","hr","min","s","e"), sep=c(pathlength,pathlength+4,pathlength+5,pathlength+7,pathlength+9,pathlength+11,pathlength+13,pathlength+15,pathlength+17), remove=FALSE) %>% select(-value, -dot, -e)
+
+write.csv(d3, "data/neckpoint2021_filelist.csv", row.names = F)
+
 
 # choose a subset of files for finer scale (10 secs) analysis 
 # df <- 
