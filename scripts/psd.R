@@ -15,6 +15,7 @@ source('PAM-R/Viewer.R')
 # http://oceaninstruments.azurewebsites.net/App/#/%23
 
 # for denman island spawning data
+loc<- "neck21"
 file_prefix <- "5042"
 calib_value <- -176.2
 
@@ -57,8 +58,8 @@ set_welch <- 120 # 1 min time resolution
 
 # dir.create(file.path("data", file_prefix))
 if (set_welch == ""){welch_lab <- "all" } else {welch_lab <- set_welch/2}
-dir.create(file.path("data", paste0(file_prefix,"-",  welch_lab, "s")))
-dir.create(file.path("data", paste0(file_prefix, "-meta-", welch_lab, "s")))
+dir.create(file.path("data", paste0(loc, "-", file_prefix,"-",  welch_lab, "s")))
+dir.create(file.path("data", paste0(loc, "-", file_prefix, "-meta-", welch_lab, "s")))
 ## and another level if changing lcut from 20 
 # dir.create(file.path("data", paste0(file_prefix, "-tres-", welch_lab), paste0("lcut-", set_lcut)))
 
@@ -77,7 +78,7 @@ PAMGuide(
   welch = set_welch,# assuming default of 50% overlap, this is the # seconds x2
   plottype = "none",# tells it whether or not to plot the output
   timestring = paste0(file_prefix, ".%y%m%d%H%M%S.wav"),# for time stamped data - change the prefix to match the soundtrap used
-  outdir = here::here("data", paste0(file_prefix, "-", welch_lab, "s")# , paste0("lcut-", set_lcut)
+  outdir = here::here("data", paste0(loc, "-", file_prefix, "-", welch_lab, "s")# , paste0("lcut-", set_lcut)
     )# output directory within project folder
 )
 
