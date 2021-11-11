@@ -13,15 +13,29 @@ source('PAM-R/Viewer.R')
 # note: numeric dates are base on origin = "1970-01-01"
 # get the calibration number from the ocean instruments site
 # http://oceaninstruments.azurewebsites.net/App/#/%23
+# for high gain setting
 
-# for denman island spawning data
+# for neck pt spawning data
 loc<- "neck21"
+
+## for denman island spawning data
+loc<- "denman20"
 file_prefix <- "5042"
 calib_value <- -176.2
 
+# for collishaw pt spawning data
+loc<- "collishaw20"
+file_prefix <- "5040"
+calib_value <- -175.9
+
 # for 2018 data in qualicum beach or false bay area
+loc<- "locA18"
 file_prefix <- "67391491"
 calib_value <- -172.8
+
+loc<- "locB18"
+file_prefix <- "67641350"
+calib_value <- -172.3
 
 # HERRING SOUND NOTES
 # described in Wilson et al. 2004 as stereotyped bursts of 7–65 pulses (mean of 32)
