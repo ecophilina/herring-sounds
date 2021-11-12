@@ -7,6 +7,90 @@ lp(pck="ggsidekick")
 # lp(pck="lubridate")
 # lp(pck="readxl")
 
+
+# merge broadband SPL data 
+
+# set_lcut <- 20 # seems to be the extent of low band in data
+# set_hcut <- "none"
+# 
+# ## low band
+# set_lcut <- 20 # seems to be the extent of low band in data
+# set_hcut <- 2000 # high frequency cut off on Hz
+# 
+# ## herring band
+# set_lcut <- 2000 # seems to be the extent of low band in data
+# set_hcut <- 6000 # high frequency cut off on Hz
+# 
+# ## high band
+# set_lcut <- 6000 # seems to be the extent of low band in data
+# set_hcut <- 24000 # high frequency cut off on Hz
+# 
+# # paste0(set_lcut/1000,"to", set_hcut/1000, "kHz")
+
+
+
+set_welch <- 120 # 1 min time resolution
+if (set_welch == ""){welch_lab <- "all" } else {welch_lab <- set_welch/2}
+
+
+
+## for denman island spawning data
+loc <- "denman20"
+file_prefix <- "5042"
+calib_value <- -176.2
+
+# # for collishaw pt spawning data
+loc <- "collishaw20"
+file_prefix <- "5040"
+calib_value <- -175.9
+
+# # for neck pt spawning data
+loc <- "neck21"
+file_prefix <- "5042"
+calib_value <- -176.2
+
+b1 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_broadband.rds"))
+
+b2 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_0.02to2kHz.rds"))
+
+b3 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_2to6kHz.rds"))
+
+b4 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_6to24kHz.rds"))
+
+dspl <- left_join(b1, b2) %>% left_join(., b3) %>% left_join(., b4) %>% 
+  rename(spldatetime = datetime) %>% select(-sec) %>% mutate(site = "Denman (2020)") %>% 
+  mutate(bin15min = ifelse(min < 30, 0, 30),
+         samp.start.min = ifelse(min < 30, min, min -30)
+  )
+
+
+cspl <- left_join(b1, b2) %>% left_join(., b3) %>% left_join(., b4) %>% 
+  rename(spldatetime = datetime) %>% select(-sec) %>% mutate(site = "Collishaw (2020)")%>% 
+  mutate(bin15min = ifelse(min < 30, 0, 30),
+         samp.start.min = ifelse(min < 30, min, min -30)
+  )
+
+pspl <- left_join(b1, b2) %>% left_join(., b3) %>% left_join(., b4) %>% 
+  rename(spldatetime = datetime) %>% select(-sec) %>% mutate(site = "Neck Point (2021)") %>% 
+  mutate(bin15min = ifelse(d > 12, ifelse(min < 30, 1, 31), ifelse(min < 30, 0, 30)),
+         bin15min = ifelse(d == 12 & hr == 23 & min >= 30, 31, bin15min),
+         samp.start.min = ifelse(min < 30, min, ifelse(d > 11 & hr > 0, min-31, min-30))
+  )
+
+
+spl <- bind_rows(dspl, cspl, pspl) %>% #select (-min) %>% 
+  mutate(samp.start.min = as.integer(samp.start.min)) %>% 
+  select(site, m, d, hr, samp.start.min, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz, bin15min)
+
+
+spl15 <- spl %>% group_by(site, m, d, hr, bin15min) %>% 
+  summarise_all(mean) %>% 
+  # summarise(across(where(is.numeric), ~ mean(.x, na.rm = TRUE))) %>% 
+  select(-samp.start.min)
+
+
+# bring in annotations 
+
 d<-read.csv("raw-annotations/Denman_1min_200306.csv", stringsAsFactors = F
   ) %>% mutate(site = "Denman (2020)") 
 c<-read.csv("raw-annotations/Collishaw_1min_200306.csv", stringsAsFactors = F
@@ -31,8 +115,8 @@ dat <- bind_rows(d, c, p, s) %>%
     sep=c(-10,-8,-6,-4,-2),
     remove=FALSE)%>%
   mutate(year=as.numeric(year),
-    month=as.numeric(month),
-    day=as.numeric(day),
+    m=as.numeric(month),
+    d=as.numeric(day),
     hr=as.numeric(hr),
     min=as.numeric(min),
     sec=as.numeric(sec), 
@@ -41,7 +125,11 @@ dat <- bind_rows(d, c, p, s) %>%
     ) 
 
 
-ds1 <- dat %>% group_by(site, boat, herring.hs) %>% summarise(n = n())
+
+
+dat <- left_join(dat, spl)
+
+ds1 <- dat %>% group_by(site, day, boat, herring.hs) %>% summarise(n = n())
 
 
 # # only Denman has level 3 boat and .hs together
@@ -49,7 +137,6 @@ ds1 <- dat %>% group_by(site, boat, herring.hs) %>% summarise(n = n())
 
 
 # 15 min samples
-
 
 
 d2<-read.csv("raw-annotations/Denman_15min_200308.csv", stringsAsFactors = F
@@ -68,31 +155,36 @@ dat2 <- bind_rows(d2, c2, p2) %>%
     sep=c(-10,-8,-6,-4,-2),
     remove=FALSE)%>%
   mutate(year=as.numeric(year),
-    month=as.numeric(month),
-    day=as.numeric(day),
-    hr=as.numeric(hr),    
-    # correct daylight savings time to standard time
+    m=as.numeric(month),
+    d=as.numeric(day),
+    hr=as.numeric(hr),
+    min=as.numeric(min),
+    sec=as.numeric(sec),
+    bin15min = min) %>% left_join(., spl15) %>% 
+  mutate(
+  # correct daylight savings time to standard time
     hr=case_when(
       datetime > "200308013002" & datetime < "210000000000" ~ hr - 1,
       datetime > "210314013110" ~ hr - 1,
       TRUE ~ hr
     ),
-    day=case_when(
-      hr < 0 ~ day - 1,
-      TRUE ~ day
+    d=case_when(
+      hr < 0 ~ d - 1,
+      TRUE ~ d
     ),
     hr=case_when(
       hr < 0 ~ 23,
       TRUE ~ hr
     ),
-    min=as.numeric(min),
-    sec=as.numeric(sec), 
     time = hr + (min/60) #+ (sec/60/60)
   ) %>% group_by(site) %>% mutate(
-    daysintosample = (day-min(day))+ time/24 
+    daysintosample = (d-min(d))+ time/24 
         ) %>% ungroup()
 
 dat2$samp.min <- 15
+
+
+
 
 ds15 <- dat2 %>% group_by(site, boat, herring.hs) %>% summarise(n = n())
 
@@ -116,27 +208,30 @@ dat1 <- dat1 %>%
     sep=c(-10,-8,-6,-4,-2),
     remove=FALSE)%>%
   mutate(year=as.numeric(year),
-    month=as.numeric(month),
-    day=as.numeric(day),
+    m=as.numeric(month),
+    d=as.numeric(day),
     hr=as.numeric(hr),
     min=as.numeric(min),
     sec=as.numeric(sec),
+    bin15min = min,
     time = hr + (min/60) #+ (sec/60/60)
   ) %>% group_by(site) %>% mutate(
-    daysintosample = (day-min(day))+ time/24 
-  ) %>% ungroup()
+    daysintosample = (d-min(d))+ time/24 
+  ) %>% ungroup()  %>% left_join(., spl15)
 
 dat1$notes <- as.character(dat1$notes)
 dat1$herr.notes <- as.character(dat1$herr.notes)
 dat1$samp.min <- 1
 
-alldat <- bind_rows(dat1, dat2)
+alldat <- bind_rows(dat1, dat2) %>% filter(site !="Neck Point (2020)")
 
 ### data exploration
 
 sample_counts_1min <- dat %>% group_by(site) %>% summarise(n = n())
 sample_counts_15min <- dat2 %>% group_by(site) %>% summarise(n = n())
 
+
+sample_w_hs <- alldat %>% filter(herring.hs > 0) %>% group_by(site) %>% summarise(n = n())
 sample_w_pinnipeds <- alldat %>% filter(pinniped > 0) %>% group_by(site) %>% summarise(n = n())
 sample_w_gulls <- alldat %>% filter(gull > 0) %>% group_by(site) %>% summarise(n = n())
 # sample_w_cetacean <- alldat %>% filter(cetacean > 0) %>% group_by(site) %>% summarise(n = n()) # no cetaceans
@@ -150,6 +245,46 @@ sample_1_he_p <- dat %>% filter(herring.p > 0)
 # ggplot(dat2, aes(boat, herring.hs, colour = site)) + geom_jitter(height = 0, width = 0.2)
 ggplot(ds1, aes(boat, herring.hs, size = n, colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
 ggplot(ds15, aes(boat, herring.hs, size = n, colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
+
+ggplot(dat, aes(SPL, herring.hs,  colour = site)) + geom_point() + facet_wrap(~site) +theme_sleek()
+
+ggplot(alldat, aes(SPL, herring.hs,  colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
+ggplot(alldat, aes(SPL0.02to2kHz, herring.hs,  colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
+ggplot(alldat, aes(SPL2to6kHz, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
+ggplot(alldat, aes(SPL6to24kHz, herring.hs,  colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
+
+
+dat0 <- dat %>% filter(site != "Neck Point (2020)") %>% filter(site != "Denman (2020)") %>% 
+  # filter(herring.hs %in% c(0,2,3)) %>%
+  filter(SPL < 93)
+
+
+ggplot(dat0, aes(SPL2to6kHz/SPL0.02to2kHz, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
+ggplot(dat0, aes(SPL2to6kHz-SPL6to24kHz, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
+ggplot(dat0, aes((SPL0.02to2kHz+SPL6to24kHz)/2, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
+
+
+ggplot(dat0, aes(SPL2to6kHz-SPL6to24kHz, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
+
+ggplot(dat0, aes(SPL6to24kHz, SPL2to6kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+ggplot(dat0, aes(SPL0.02to2kHz, SPL2to6kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+# ggplot(dat0, aes(SPL0.02to2kHz, SPL6to24kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~site) + theme_sleek()
+ggplot(dat0, aes(SPL, SPL2to6kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+
+ggplot(dat0, aes(as.factor(herring.hs), SPL0.02to2kHz)) + geom_violin() + theme_sleek()
+ggplot(dat0, aes(as.factor(herring.hs), SPL2to6kHz)) + geom_violin() + theme_sleek()
+ggplot(dat0, aes(as.factor(herring.hs), SPL6to24kHz)) + geom_violin() + theme_sleek()
+
+ggplot(dat0, aes(as.factor(herring.hs), (SPL6to24kHz)/SPL)) + geom_violin() + theme_sleek()
+
+ggplot(dat0, aes(as.factor(boat), SPL)) + geom_violin() + theme_sleek() + ylim(80, 140)
+ggplot(dat0, aes(as.factor(boat), SPL0.02to2kHz)) + geom_violin() + theme_sleek() + ylim(80, 140)
+ggplot(dat0, aes(as.factor(boat), SPL2to6kHz)) + geom_violin() + theme_sleek()+ ylim(80, 140)
+ggplot(dat0, aes(as.factor(boat), SPL6to24kHz)) + geom_violin() + theme_sleek()+ ylim(80, 140)
+ggplot(dat0, aes(as.factor(boat), (SPL0.02to2kHz+SPL6to24kHz)/2)) + geom_violin() + theme_sleek()+ ylim(80, 140)
+
+
+ggplot(dat0, aes(SPL, (SPL0.02to2kHz+SPL6to24kHz)/2)) + geom_point()
 
 # combined
 
@@ -193,7 +328,7 @@ ggplot(alldat, aes(daysintosample, herring.hs, colour = site)) + geom_point() + 
 
 ## preliminary heat maps for 1 min data
 
-ggplot(dat, aes(day, time, fill = herring.hs, alpha = -boat)) + geom_tile(width=1, height=0.02) + 
+ggplot(dat, aes(day, time, fill = herring.hs, alpha = -SPL)) + geom_tile(width=1, height=0.02) + 
   scale_fill_viridis_c("Herring\nScore") + 
   scale_alpha_continuous(guide = "none", range = c(0.5, 1)) + 
   facet_wrap(~site, ncol = 4, scales = "free") + theme_sleek() + theme(panel.background = element_rect(fill = "black"))
@@ -217,7 +352,7 @@ ggplot(data = filter(dat, herring.hs > 0), aes(day, time, fill = herring.hs)) +
 # heat maps for all data pooled to 15 min
 
 alldat %>% filter(site != "Neck Point (2020)") %>%
-ggplot(aes(day, time, fill = herring.hs, alpha = -boat)) + geom_tile(width=1, height=0.5) + 
+ggplot(aes(d, time, fill = herring.hs, alpha = -(SPL))) + geom_tile(width=1, height=0.5) + 
   geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.5)+
   scale_fill_viridis_c("Herring\nScore") + 
   scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
@@ -231,7 +366,7 @@ ggsave("herring-time-by-day-mean.png", height = 3, width = 6)
 
 
 alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(day, time, fill = fish.knock, alpha = -boat)) + geom_tile(width=1, height=0.5) + 
+  ggplot(aes(d, time, fill = fish.knock, alpha = -SPL)) + geom_tile(width=1, height=0.5) + 
   scale_fill_viridis_c("Other\nFish\nScore") + 
   scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
   xlab("Date (March)") + 
@@ -241,10 +376,21 @@ alldat %>% filter(site != "Neck Point (2020)") %>%
 
 ggsave("fishknocks-time-by-day-mean.png", height = 3, width = 6)
 
+alldat %>% filter(site != "Neck Point (2020)") %>%
+  ggplot(aes(d, time, fill = SPL)) + geom_tile(width=1, height=0.5) + 
+  geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", size = 0.5)+
+  scale_fill_viridis_c("SPL") + 
+  xlab("Date") + 
+  ylab("Time of day (24 hr clock)") +
+  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+  # guides(size = "none") +
+  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+
+ggsave("SPL-time-by-day-mean.png", height = 3, width = 6)
 
 
 alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(day, time, fill = boat)) + geom_tile(width=1, height=0.5) + 
+  ggplot(aes(d, time, fill = boat)) + geom_tile(width=1, height=0.5) + 
   geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", size = 0.5)+
   scale_fill_viridis_c("Boat\nNoise") + 
   xlab("Date") + 
@@ -255,8 +401,10 @@ alldat %>% filter(site != "Neck Point (2020)") %>%
 
 ggsave("boat-time-by-day-mean.png", height = 3, width = 6)
 
+
+
 alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(day, time, fill = waves)) + geom_tile(width=1, height=0.5) + 
+  ggplot(aes(d, time, fill = waves)) + geom_tile(width=1, height=0.5) + 
   scale_fill_viridis_c("Wave\nNoise") + 
   xlab("Date") + 
   ylab("Time of day (24 hr clock)") +
