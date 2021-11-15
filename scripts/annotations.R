@@ -176,7 +176,7 @@ dat2 <- bind_rows(d2, c2, p2) %>%
       hr < 0 ~ 23,
       TRUE ~ hr
     ),
-    time = hr + (min/60) #+ (sec/60/60)
+    time = round(hr + (min/60), 1) #+ (sec/60/60)
   ) %>% group_by(site) %>% mutate(
     daysintosample = (d-min(d))+ time/24 
         ) %>% ungroup()
@@ -214,7 +214,7 @@ dat1 <- dat1 %>%
     min=as.numeric(min),
     sec=as.numeric(sec),
     bin15min = min,
-    time = hr + (min/60) #+ (sec/60/60)
+    time = round(hr + (min/60), 1) #+ (sec/60/60)
   ) %>% group_by(site) %>% mutate(
     daysintosample = (d-min(d))+ time/24 
   ) %>% ungroup()  %>% left_join(., spl15)
@@ -223,7 +223,12 @@ dat1$notes <- as.character(dat1$notes)
 dat1$herr.notes <- as.character(dat1$herr.notes)
 dat1$samp.min <- 1
 
-alldat <- bind_rows(dat1, dat2) %>% filter(site !="Neck Point (2020)")
+alldat <- bind_rows(dat1, dat2) %>% filter(site !="Neck Point (2020)")%>%
+  group_by(site) %>%
+  mutate(SPL_st = scale(SPL), SPL_mean = attr(scale(SPL),"scaled:center"),
+         SPL0.02to2kHz_st = scale(SPL0.02to2kHz), SPL0.02to2kHz_mean = attr(scale(SPL0.02to2kHz),"scaled:center"),
+         SPL2to6kHz_st = scale(SPL2to6kHz), SPL2to6kHz_mean = attr(scale(SPL2to6kHz),"scaled:center"),
+         SPL6to24kHz_st = scale(SPL6to24kHz), SPL6to24kHz_mean = attr(scale(SPL6to24kHz),"scaled:center")) %>% ungroup()
 
 ### data exploration
 
@@ -254,9 +259,17 @@ ggplot(alldat, aes(SPL2to6kHz, herring.hs,  colour = site)) + geom_point(alpha=0
 ggplot(alldat, aes(SPL6to24kHz, herring.hs,  colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
 
 
-dat0 <- dat %>% filter(site != "Neck Point (2020)") %>% filter(site != "Denman (2020)") %>% 
+dat0 <- dat %>% filter(site != "Neck Point (2020)") %>% 
+  group_by(site) %>%
+  mutate(SPL_st = scale(SPL), SPL_mean = attr(scale(SPL),"scaled:center"),
+         SPL0.02to2kHz_st = scale(SPL0.02to2kHz), SPL0.02to2kHz_mean = attr(scale(SPL0.02to2kHz),"scaled:center"),
+         SPL2to6kHz_st = scale(SPL2to6kHz), SPL2to6kHz_mean = attr(scale(SPL2to6kHz),"scaled:center"),
+         SPL6to24kHz_st = scale(SPL6to24kHz), SPL6to24kHz_mean = attr(scale(SPL6to24kHz),"scaled:center")) %>% 
+  #filter(site != "Denman (2020)") %>% 
   # filter(herring.hs %in% c(0,2,3)) %>%
-  filter(SPL < 93)
+  filter(SPL < 120) %>%
+  filter(boat < 3) %>%
+  ungroup() 
 
 
 ggplot(dat0, aes(SPL2to6kHz/SPL0.02to2kHz, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
@@ -266,10 +279,24 @@ ggplot(dat0, aes((SPL0.02to2kHz+SPL6to24kHz)/2, herring.hs,  colour = site)) + g
 
 ggplot(dat0, aes(SPL2to6kHz-SPL6to24kHz, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
 
-ggplot(dat0, aes(SPL6to24kHz, SPL2to6kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
-ggplot(dat0, aes(SPL0.02to2kHz, SPL2to6kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
 # ggplot(dat0, aes(SPL0.02to2kHz, SPL6to24kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~site) + theme_sleek()
-ggplot(dat0, aes(SPL, SPL2to6kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+# ggplot(dat0, aes(SPL0.02to2kHz, SPL2to6kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~site) + theme_sleek()
+# ggplot(dat0, aes(SPL2to6kHz, SPL6to24kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~site) + theme_sleek()
+
+
+
+ggplot(dat0, aes(SPL6to24kHz, SPL2to6kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+ggplot(dat0, aes(SPL0.02to2kHz, SPL2to6kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+ggplot(dat0, aes(SPL0.02to2kHz, SPL6to24kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+
+ggplot(dat0, aes(SPL, SPL2to6kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+ggplot(dat0, aes(SPL,SPL0.02to2kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+ggplot(dat0, aes(SPL, SPL6to24kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+
+
+ggplot(dat0, aes(SPL, SPL2to6kHz, alpha = herring.hs, colour = as.factor(boat))) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+ggplot(dat0, aes(SPL6to24kHz, SPL2to6kHz, alpha = herring.hs, colour = as.factor(boat))) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
+
 
 ggplot(dat0, aes(as.factor(herring.hs), SPL0.02to2kHz)) + geom_violin() + theme_sleek()
 ggplot(dat0, aes(as.factor(herring.hs), SPL2to6kHz)) + geom_violin() + theme_sleek()
@@ -277,14 +304,50 @@ ggplot(dat0, aes(as.factor(herring.hs), SPL6to24kHz)) + geom_violin() + theme_sl
 
 ggplot(dat0, aes(as.factor(herring.hs), (SPL6to24kHz)/SPL)) + geom_violin() + theme_sleek()
 
-ggplot(dat0, aes(as.factor(boat), SPL)) + geom_violin() + theme_sleek() + ylim(80, 140)
-ggplot(dat0, aes(as.factor(boat), SPL0.02to2kHz)) + geom_violin() + theme_sleek() + ylim(80, 140)
-ggplot(dat0, aes(as.factor(boat), SPL2to6kHz)) + geom_violin() + theme_sleek()+ ylim(80, 140)
-ggplot(dat0, aes(as.factor(boat), SPL6to24kHz)) + geom_violin() + theme_sleek()+ ylim(80, 140)
-ggplot(dat0, aes(as.factor(boat), (SPL0.02to2kHz+SPL6to24kHz)/2)) + geom_violin() + theme_sleek()+ ylim(80, 140)
+ggplot(dat, aes(as.factor(boat), SPL)) + geom_violin() + theme_sleek() + ylim(80, 140)
+ggplot(dat, aes(as.factor(boat), SPL0.02to2kHz)) + geom_violin() + theme_sleek() + ylim(80, 140)
+ggplot(dat, aes(as.factor(boat), SPL2to6kHz)) + geom_violin() + theme_sleek()+ ylim(80, 140)
+ggplot(dat, aes(as.factor(boat), SPL6to24kHz)) + geom_violin() + theme_sleek()+ ylim(80, 140)
+ggplot(dat, aes(as.factor(boat), (SPL0.02to2kHz+SPL6to24kHz)/2)) + geom_violin() + theme_sleek()+ ylim(80, 140)
 
 
-ggplot(dat0, aes(SPL, (SPL0.02to2kHz+SPL6to24kHz)/2)) + geom_point()
+ggplot(alldat, aes(SPL, (SPL0.02to2kHz+SPL6to24kHz)/2)) + geom_point()
+ggplot(alldat, aes(SPL, SPL2to6kHz/(SPL0.02to2kHz+SPL6to24kHz)/2, colour = (boat))) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)
+
+ggplot(alldat, aes(SPL, SPL2to6kHz/(SPL0.02to2kHz+SPL6to24kHz)/2, colour = (herring.hs), alpha= -boat)) + geom_point() + scale_color_viridis_c()+ theme_sleek()
+
+ggplot(filter(alldat, boat < 2.2), aes(SPL, SPL2to6kHz/(SPL0.02to2kHz+SPL6to24kHz)/2, colour = (herring.hs)
+                                       #, alpha= -boat
+                                       )) + geom_point() + scale_color_viridis_c()+ theme_sleek()
+
+
+ggplot(filter(alldat, boat < 2.2), aes(SPL0.02to2kHz, SPL2to6kHz/SPL6to24kHz, colour = (herring.hs)
+                                       #, alpha= -boat
+)) + geom_point() + scale_color_viridis_c()+ theme_sleek()+ facet_wrap(~site)
+
+
+ggplot(alldat, aes(SPL_st, SPL2to6kHz_st, colour = (boat))) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)
+ggplot(alldat, aes(SPL_st, SPL0.02to2kHz_st, colour = (boat))) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)
+
+ggplot(alldat, aes(SPL2to6kHz_st, SPL0.02to2kHz_st, colour = (herring.hs))) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)+ facet_wrap(~site)
+
+ggplot(alldat, aes(SPL_st, SPL0.02to2kHz_st-SPL2to6kHz_st, colour = (herring.hs))) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)+ facet_wrap(~site)
+
+ggplot(alldat, aes(SPL_st, SPL0.02to2kHz_st-(SPL2to6kHz_st+SPL6to24kHz_st), colour = (herring.hs), alpha= -boat)) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)+ facet_wrap(~site)
+
+ggplot(dat0, aes(as.factor(herring.hs), SPL0.02to2kHz_st-(SPL2to6kHz_st+SPL6to24kHz_st))) + geom_violin()+ theme_sleek()
+#+ scale_color_viridis_c(option="A", end = 0.6)+ facet_wrap(~site)
+
+
+
+ggplot(alldat, aes(SPL2to6kHz, (SPL0.02to2kHz+SPL6to24kHz)/2, colour = (herring.hs), alpha= -boat)) + geom_point() + scale_color_viridis_c()+ theme_sleek()
+
+ggplot(dat, aes(SPL2to6kHz, (SPL0.02to2kHz+SPL6to24kHz)/2, colour = (herring.hs), alpha= -boat)) + geom_point() + 
+  scale_color_viridis_c()+ facet_wrap(~herring.hs) + theme_sleek()
+
+
+ggplot(alldat, aes((SPL2to6kHz+SPL6to24kHz)/2, SPL0.02to2kHz, colour = (herring.hs), alpha= -boat)) + geom_point() + scale_color_viridis_c()
+
 
 # combined
 
@@ -338,7 +401,7 @@ ggplot(data = filter(dat, herring.hs > 0), aes(day, time, fill = herring.hs)) +
   geom_tile(data = filter(dat, herring.p > 0), aes(day, time, fill = herring.p), width=1, height=0.02) +
   geom_tile(data = filter(dat, herring.frt > 0), aes(day, time, fill = herring.frt),width=1, height=0.02) +
   geom_tile(width=1, height=0.02) + 
-  geom_tile(data = filter(dat), aes(day, time, alpha = boat), fill = "purple", width=1, height=0.02) +
+  geom_tile(data = filter(dat), aes(day, time, alpha = -SPL), fill = "purple", width=1, height=0.02) +
   scale_fill_viridis_c("Herring\nScore", begin = 0.4) + 
   scale_alpha_continuous(guide = "none", range = c(0.001, 0.3)) + 
   facet_wrap(~site, ncol = 4, scales = "free") + theme_sleek() + theme(panel.background = element_rect(fill = "black"))
@@ -362,7 +425,35 @@ ggplot(aes(d, time, fill = herring.hs, alpha = -(SPL))) + geom_tile(width=1, hei
   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
 
 # ggsave("herring-time-by-day-max.png", height = 5, width = 3)
-ggsave("herring-time-by-day-mean.png", height = 3, width = 6)
+ggsave("herring-time-by-day-mean-spl-alpha.png", height = 3, width = 6)
+
+
+alldat %>% filter(site != "Neck Point (2020)") %>%
+  ggplot(aes(d, time, fill = herring.hs, alpha = -(SPL2to6kHz_st))) + geom_tile(width=1, height=0.5) + 
+  geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.5)+
+  scale_fill_viridis_c("Herring\nScore") + 
+  scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
+  xlab("Date (March)") + 
+  ylab("Pacific Standard Time") +
+  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+
+# ggsave("herring-time-by-day-max.png", height = 5, width = 3)
+ggsave("herring-time-by-day-mean-spl2to6-alpha.png", height = 3, width = 6)
+
+
+alldat %>% filter(site != "Neck Point (2020)") %>%
+  ggplot(aes(d, time, fill = herring.hs, alpha = -(boat))) + geom_tile(width=1, height=0.5) + 
+  geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.5)+
+  scale_fill_viridis_c("Herring\nScore") + 
+  scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
+  xlab("Date (March)") + 
+  ylab("Pacific Standard Time") +
+  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+
+ggsave("herring-time-by-day-mean-boat-alpha.png", height = 3, width = 6)
+
 
 
 alldat %>% filter(site != "Neck Point (2020)") %>%
@@ -378,8 +469,8 @@ ggsave("fishknocks-time-by-day-mean.png", height = 3, width = 6)
 
 alldat %>% filter(site != "Neck Point (2020)") %>%
   ggplot(aes(d, time, fill = SPL)) + geom_tile(width=1, height=0.5) + 
-  geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", size = 0.5)+
-  scale_fill_viridis_c("SPL") + 
+  # geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", size = 0.5)+
+  scale_fill_viridis_c("SPL\n > 0.2 kHz") + 
   xlab("Date") + 
   ylab("Time of day (24 hr clock)") +
   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
@@ -387,6 +478,20 @@ alldat %>% filter(site != "Neck Point (2020)") %>%
   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
 
 ggsave("SPL-time-by-day-mean.png", height = 3, width = 6)
+
+
+
+alldat %>% filter(site != "Neck Point (2020)") %>%
+  ggplot(aes(d, time, fill = SPL2to6kHz)) + geom_tile(width=1, height=0.5) + 
+  # geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", size = 0.5)+
+  scale_fill_viridis_c("SPL\n2 to 6 kHz") + 
+  xlab("Date") + 
+  ylab("Time of day (24 hr clock)") +
+  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+  # guides(size = "none") +
+  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+
+ggsave("SPL2to6kHz-time-by-day-mean.png", height = 3, width = 6)
 
 
 alldat %>% filter(site != "Neck Point (2020)") %>%
@@ -400,6 +505,41 @@ alldat %>% filter(site != "Neck Point (2020)") %>%
   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
 
 ggsave("boat-time-by-day-mean.png", height = 3, width = 6)
+
+
+alldat %>% filter(site != "Neck Point (2020)") %>%
+  ggplot(aes(d, time, fill = (SPL6to24kHz))) + geom_tile(width=1, height=0.5) + 
+  scale_fill_viridis_c("SPL\n6 to 24 kHz") + 
+  xlab("Date") + 
+  ylab("Time of day (24 hr clock)") +
+  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+  # guides(size = "none") +
+  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+
+ggsave("SPL6to24kHz-time-by-day-mean.png", height = 3, width = 6)
+
+
+alldat %>% filter(site != "Neck Point (2020)") %>%
+  ggplot(aes(d, time, fill = (SPL6to24kHz+SPL2to6kHz)/2)) + geom_tile(width=1, height=0.5) + 
+  scale_fill_viridis_c("SPL\n2 to 24 kHz") + 
+  xlab("Date") + 
+  ylab("Time of day (24 hr clock)") +
+  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+  # guides(size = "none") +
+  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+
+ggsave("SPL2to24kHz-time-by-day-mean.png", height = 3, width = 6)
+
+alldat %>% filter(site != "Neck Point (2020)") %>%
+  ggplot(aes(d, time, fill = (SPL0.02to2kHz))) + geom_tile(width=1, height=0.5) + 
+  scale_fill_viridis_c("SPL\n0.2 to 2 kHz") + 
+  xlab("Date") + 
+  ylab("Time of day (24 hr clock)") +
+  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+  # guides(size = "none") +
+  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+
+ggsave("SPL0.2to2kHz-time-by-day-mean.png", height = 3, width = 6)
 
 
 
