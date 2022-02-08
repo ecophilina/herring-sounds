@@ -99,17 +99,25 @@ PAMMeta(
 # set_welch <- "" # is default of no averaging across time appears to produce 0.5 sec resolution
 set_welch <- 120 # 1 min time resolution
 
-## herring band
-#set_lcut <- 2000 # seems to be the extent of low band in data
-#set_hcut <- 6000 # high frequency cut off on Hz
-
 ## low band
-set_lcut <- 20 # seems to be the extent of low band in data
-set_hcut <- 2000 # high frequency cut off on Hz
+#set_lcut <- 20 # seems to be the extent of low band in data
+#set_hcut <- 2000 # high frequency cut off on Hz
 
 ## high band
 #set_lcut <- 6000 # seems to be the extent of low band in data
 #set_hcut <- 24000 # high frequency cut off on Hz
+
+
+## herring band
+set_lcut <- 2000 # seems to be the extent of low band in data
+#set_hcut <- 6000 # high frequency cut off on Hz
+set_hcut <- 3500 # high frequency cut off on Hz new choice based on actual calls
+
+
+## boat band?
+set_lcut <- 200 # seems to be the extent of low band in data
+set_hcut <- 1000 # high frequency cut off on Hz
+
 
 # failed for folder name with - "wav-denman-2020"; works with just "denman" 
 PAMMeta(
