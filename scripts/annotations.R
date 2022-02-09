@@ -121,7 +121,8 @@ dat <- bind_rows(d, c, p, s) %>%
     min=as.numeric(min),
     sec=as.numeric(sec), 
     minintofile = secintofile/60,
-    time = hr + (min/60) + (minintofile/60)
+    time = hr + (min/60) + (minintofile/60),
+    bin15min = ifelse(min < 30, 0, 30)
     ) 
 
 
@@ -130,6 +131,40 @@ dat <- bind_rows(d, c, p, s) %>%
 dat <- left_join(dat, spl)
 
 ds1 <- dat %>% group_by(site, day, boat, herring.hs) %>% summarise(n = n())
+
+
+quiet_samp_counts <- dat %>% filter(SPL2to6kHz < 89 & herring.hs >= 3) %>% 
+  group_by(site, herring.hs) %>% summarise(n = n())%>% 
+  mutate(spl_class = "quiet")
+
+quiet_samp_mins <- dat %>% filter(SPL2to6kHz < 89 & herring.hs >= 3) %>% 
+  mutate(spl_class = "quiet")%>% 
+  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz) 
+
+mid_samp_counts <- dat %>% filter(SPL2to6kHz >= 90 & SPL2to6kHz < 99 & herring.hs >= 3) %>% 
+  group_by(site, herring.hs) %>% summarise(n = n())%>% 
+  mutate(spl_class = "mid")
+
+mid_samp_mins <- dat %>% filter(SPL2to6kHz >= 90 & SPL2to6kHz < 99 & herring.hs >= 3) %>% 
+  mutate(spl_class = "mid") %>% 
+  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz) 
+
+loud_samp_counts <- dat %>% filter(SPL2to6kHz >= 100 & herring.hs >= 1) %>% 
+  group_by(site, herring.hs) %>% summarise(n = n())%>% 
+  mutate(spl_class = "loud")
+
+loud_samp_mins <- dat %>% filter(SPL2to6kHz >= 100 & herring.hs >= 1) %>% 
+  mutate(spl_class = "loud")%>% 
+  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz) 
+
+
+samp_counts <- bind_rows(quiet_samp_counts, mid_samp_counts, loud_samp_counts)
+
+samp_mins <- bind_rows(quiet_samp_mins, mid_samp_mins, loud_samp_mins)
+
+sort(unique(samp_mins$filename))
+
+write_csv(samp_mins, "herring3splsortedmins.csv")
 
 
 # # only Denman has level 3 boat and .hs together
@@ -185,6 +220,11 @@ dat2$samp.min <- 15
 
 
 
+samp_files <- dat2 %>% filter(herring.hs >=2)
+sort(unique(samp_files$filename))
+write_csv(samp_files, "herring3files.csv")
+
+
 
 ds15 <- dat2 %>% group_by(site, boat, herring.hs) %>% summarise(n = n())
 
@@ -222,6 +262,7 @@ dat1 <- dat1 %>%
 dat1$notes <- as.character(dat1$notes)
 dat1$herr.notes <- as.character(dat1$herr.notes)
 dat1$samp.min <- 1
+
 
 alldat <- bind_rows(dat1, dat2) %>% filter(site !="Neck Point (2020)")%>%
   group_by(site) %>%
