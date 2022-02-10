@@ -32,46 +32,45 @@ lp(pck="ggsidekick")
 set_welch <- 120 # 1 min time resolution
 if (set_welch == ""){welch_lab <- "all" } else {welch_lab <- set_welch/2}
 
+# ## for denman island spawning data
+# loc <- "denman20"
+# file_prefix <- "5042"
+# calib_value <- -176.2
+# 
+# # # for collishaw pt spawning data
+# loc <- "collishaw20"
+# file_prefix <- "5040"
+# calib_value <- -175.9
+# 
+# # # for neck pt spawning data
+# loc <- "neck21"
+# file_prefix <- "5042"
+# calib_value <- -176.2
 
 
-## for denman island spawning data
-loc <- "denman20"
-file_prefix <- "5042"
-calib_value <- -176.2
+merge_spl_ranges <- function(loc, file_prefix, calib_value){
+ b1 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_broadband.rds"))
+ b2a <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_0.02to2kHz.rds"))
+ b2 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_0.2to1kHz.rds"))
+ b3 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_2to3.5kHz.rds"))
+ b4 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_2to6kHz.rds"))
+ b5 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_6to24kHz.rds"))
 
-# # for collishaw pt spawning data
-loc <- "collishaw20"
-file_prefix <- "5040"
-calib_value <- -175.9
+ left_join(b1, b2) %>% left_join(., b2a) %>% left_join(., b3) %>% left_join(., b4) %>% left_join(., b5) %>% 
+  rename(spldatetime = datetime) %>% select(-sec) 
+}
 
-# # for neck pt spawning data
-loc <- "neck21"
-file_prefix <- "5042"
-calib_value <- -176.2
-
-b1 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_broadband.rds"))
-
-b2 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_0.02to2kHz.rds"))
-
-b3 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_2to6kHz.rds"))
-
-b4 <- readRDS(paste0("data/", loc, "_", file_prefix, "_",  welch_lab, "s/", loc, "_6to24kHz.rds"))
-
-dspl <- left_join(b1, b2) %>% left_join(., b3) %>% left_join(., b4) %>% 
-  rename(spldatetime = datetime) %>% select(-sec) %>% mutate(site = "Denman (2020)") %>% 
+dspl <- merge_spl_ranges("denman20", "5042", -176.2) %>% mutate(site = "Denman (2020)") %>% 
+  mutate(bin15min = ifelse(min < 30, 0, 30),
+         samp.start.min = ifelse(min < 30, min, min -30)
+  )
+  
+cspl <- merge_spl_ranges("collishaw20", "5040", -175.9) %>% mutate(site = "Collishaw (2020)") %>% 
   mutate(bin15min = ifelse(min < 30, 0, 30),
          samp.start.min = ifelse(min < 30, min, min -30)
   )
 
-
-cspl <- left_join(b1, b2) %>% left_join(., b3) %>% left_join(., b4) %>% 
-  rename(spldatetime = datetime) %>% select(-sec) %>% mutate(site = "Collishaw (2020)")%>% 
-  mutate(bin15min = ifelse(min < 30, 0, 30),
-         samp.start.min = ifelse(min < 30, min, min -30)
-  )
-
-pspl <- left_join(b1, b2) %>% left_join(., b3) %>% left_join(., b4) %>% 
-  rename(spldatetime = datetime) %>% select(-sec) %>% mutate(site = "Neck Point (2021)") %>% 
+pspl <-  merge_spl_ranges("neck21", "5042", -176.2) %>% mutate(site = "Neck Point (2021)") %>% 
   mutate(bin15min = ifelse(d > 12, ifelse(min < 30, 1, 31), ifelse(min < 30, 0, 30)),
          bin15min = ifelse(d == 12 & hr == 23 & min >= 30, 31, bin15min),
          samp.start.min = ifelse(min < 30, min, ifelse(d > 11 & hr > 0, min-31, min-30))
@@ -80,7 +79,8 @@ pspl <- left_join(b1, b2) %>% left_join(., b3) %>% left_join(., b4) %>%
 
 spl <- bind_rows(dspl, cspl, pspl) %>% #select (-min) %>% 
   mutate(samp.start.min = as.integer(samp.start.min)) %>% 
-  select(site, m, d, hr, samp.start.min, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz, bin15min)
+  # select(site, m, d, hr, samp.start.min, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz, bin15min)
+  select(site, m, d, hr, samp.start.min, SPL, SPL0.02to2kHz, SPL0.2to1kHz, SPL2to3.5kHz, SPL2to6kHz, SPL6to24kHz, bin15min)
 
 
 spl15 <- spl %>% group_by(site, m, d, hr, bin15min) %>% 
@@ -89,6 +89,8 @@ spl15 <- spl %>% group_by(site, m, d, hr, bin15min) %>%
   select(-samp.start.min)
 
 
+
+#### COMPILE 1 min samples ####
 # bring in annotations 
 
 d<-read.csv("raw-annotations/Denman_1min_200306.csv", stringsAsFactors = F
@@ -104,7 +106,6 @@ s<-read.csv("raw-annotations/NeckPtA_1min_200407.csv", stringsAsFactors = F
 ) %>% mutate(site = "Neck Point (2020)") 
 
 s$invert.snap <- as.integer(s$invert.snap) # records overpowered by boat noise replaced by NAs
-
 
 dat <- bind_rows(d, c, p, s) %>%
   separate(filename, sep=c("\\."), 
@@ -125,54 +126,204 @@ dat <- bind_rows(d, c, p, s) %>%
     bin15min = ifelse(min < 30, 0, 30)
     ) 
 
-
-
-
 dat <- left_join(dat, spl)
 
 ds1 <- dat %>% group_by(site, day, boat, herring.hs) %>% summarise(n = n())
 
 
-quiet_samp_counts <- dat %>% filter(SPL2to6kHz < 89 & herring.hs >= 3) %>% 
+### Explore SPL in all 1 min samples ####
+
+dat0 <- dat %>% filter(site != "Neck Point (2020)") %>% 
+  group_by(site) %>%
+  mutate(SPL_st = scale(SPL), SPL_mean = attr(scale(SPL),"scaled:center"),
+         SPL0.02to2kHz_st = scale(SPL0.02to2kHz), SPL0.02to2kHz_mean = attr(scale(SPL0.02to2kHz),"scaled:center"),
+         SPL0.2to1kHz_st = scale(SPL0.2to1kHz), SPL0.2to1kHz_mean = attr(scale(SPL0.2to1kHz),"scaled:center"),
+         SPL2to6kHz_st = scale(SPL2to6kHz), SPL2to6kHz_mean = attr(scale(SPL2to6kHz),"scaled:center"),
+         SPL2to3.5kHz_st = scale(SPL2to3.5kHz), SPL2to3.5kHz_mean = attr(scale(SPL2to3.5kHz),"scaled:center"),
+         SPL6to24kHz_st = scale(SPL6to24kHz), SPL6to24kHz_mean = attr(scale(SPL6to24kHz),"scaled:center")) %>% 
+  #filter(site != "Denman (2020)") %>% 
+  # filter(herring.hs %in% c(0,2,3)) %>%
+  filter(SPL < 120) %>%
+  filter(boat < 3) %>%
+  ungroup() 
+
+pairs(~ SPL + SPL0.02to2kHz + SPL0.2to1kHz + SPL2to6kHz + SPL2to3.5kHz + SPL6to24kHz + boat + herring.hs, data = dat0)
+
+p1 <- ggplot(filter(dat0, 
+                    SPL < 110),
+                    # SPL2to6kHz < 90),
+             aes(SPL0.2to1kHz, SPL2to3.5kHz, colour =herring.hs)) + 
+  geom_point(alpha = 0.5) + 
+  scale_colour_viridis_c(option = "B", end = 0.8, begin = 0.3, direction = -1) +
+  facet_wrap(~site) +
+  theme_sleek()
+
+p2 <- ggplot(filter(dat0, 
+                    SPL < 110),
+                    # SPL2to6kHz < 90),
+             aes(SPL0.2to1kHz, SPL6to24kHz, colour = herring.hs)) + 
+  geom_point(alpha = 0.5) + 
+  scale_colour_viridis_c(option = "B", end = 0.8, begin = 0.3, direction = -1) +
+  facet_wrap(~site) +
+  theme_sleek()
+
+p3 <- ggplot(filter(dat0, 
+                    SPL < 110),
+                    # SPL2to6kHz < 90),
+             aes(SPL0.02to2kHz, SPL6to24kHz, colour = herring.hs)) + 
+  geom_point(alpha = 0.5) + 
+  scale_colour_viridis_c(option = "B", end = 0.8, begin = 0.3, direction = -1) +
+  facet_wrap(~site) +
+  theme_sleek()
+
+p4 <- ggplot(filter(dat0, 
+                    SPL < 110),
+             # SPL2to6kHz < 90),
+             aes(SPL, SPL2to3.5kHz, colour = herring.hs)) + 
+  geom_point(alpha = 0.5) + 
+  scale_colour_viridis_c(option = "B", end = 0.8, begin = 0.3, direction = -1) +
+  facet_wrap(~site) +
+  theme_sleek()
+
+p5 <- ggplot(filter(dat0, 
+                    SPL < 110),
+             # SPL2to6kHz < 90),
+             aes(SPL, SPL6to24kHz, colour =herring.hs)) + 
+  geom_point(alpha = 0.5) + 
+  scale_colour_viridis_c(option = "B", end = 0.8, begin = 0.3, direction = -1) +
+  facet_wrap(~site) +
+  theme_sleek()
+
+
+
+
+p1 + p4 + p2 + p5 + patchwork::plot_layout(nrow =2, guides = "collect")
+
+ggsave("freqbinnedSPLunder110db.pdf", width = 10, height = 7)
+
+# explore by boat score
+ggplot(dat0, aes(SPL2to6kHz, SPL2to3.5kHz, colour = as.factor(boat)), alpha = 0.5) + geom_point() + 
+  #facet_wrap(~herring.hs) +
+  theme_sleek()
+
+ggplot(dat0, aes(SPL0.2to1kHz, SPL2to3.5kHz, colour = as.factor(boat), shape = as.factor(herring.hs)), 
+       alpha = 0.5) + geom_point() + 
+  # facet_wrap(~herring.hs) +
+  theme_sleek()
+
+# explore boats with violins
+ggplot(dat0, aes(as.factor(boat), SPL))+ geom_violin()
+ggplot(dat0, aes(as.factor(boat), SPL0.2to1kHz))+ geom_violin()
+ggplot(dat0, aes(as.factor(boat), SPL0.02to2kHz))+ geom_violin()
+ggplot(dat0, aes(as.factor(boat), SPL2to3.5kHz))+ geom_violin()
+ggplot(dat0, aes(as.factor(boat), SPL2to6kHz))+ geom_violin() # this appears to represent boat noise best
+ggplot(dat0, aes(as.factor(boat), SPL6to24kHz))+ geom_violin()
+
+
+m1 <- lm(SPL2to3.5kHz~boat*SPL, data = dat0)
+summary(m1)
+dat0$resid_2to3.5 <- residuals(m1)
+m2 <- lm(SPL2to6kHz~boat*SPL, data = dat0)
+dat0$resid_2to6 <- residuals(m2)
+
+ggplot(dat0, aes(as.factor(herring.hs), resid_2to3.5, colour = site))+ facet_grid(~site) +
+  geom_violin() +
+  geom_jitter(width = 0.1, height = 0,  alpha=0.3) 
+
+ggplot(dat0, aes(as.factor(herring.hs), resid_2to6, colour = site))+ facet_grid(~site) +
+  geom_violin() +
+  geom_jitter(width = 0.1, height = 0,  alpha=0.3) 
+
+# explore boats with violins
+ggplot(dat0, aes(as.factor(waves), SPL))+ geom_violin()
+ggplot(dat0, aes(as.factor(waves), SPL0.2to1kHz))+ geom_violin()
+ggplot(dat0, aes(as.factor(waves), SPL0.02to2kHz))+ geom_violin()
+ggplot(dat0, aes(as.factor(waves), SPL2to3.5kHz))+ geom_violin()
+ggplot(dat0, aes(as.factor(waves), SPL2to6kHz))+ geom_violin() # this appears to represent boat noise best
+ggplot(dat0, aes(as.factor(waves), SPL6to24kHz))+ geom_violin()
+
+
+# explore herring with violins
+# filter(dat0, SPL < 110) %>%
+filter(dat0, SPL2to6kHz < 90) %>%
+ggplot(aes(herring.hs, SPL2to3.5kHz/SPL0.02to2kHz, group = as.factor(herring.hs))) +
+  facet_grid(site~boat) +
+  geom_violin() +
+  geom_jitter(width = 0.1, height = 0,  alpha=0.3) +
+  theme_sleek()
+
+# filter(dat0, SPL < 110) %>%
+filter(dat0, SPL2to6kHz < 90) %>%
+ggplot(aes(herring.hs, SPL2to3.5kHz/SPL6to24kHz, group = as.factor(herring.hs))) +
+  facet_grid(site~boat) + geom_violin() +
+  geom_jitter(width = 0.1, height = 0,  alpha=0.3) + theme_sleek()
+
+# filter(dat0, SPL < 110) %>%
+filter(dat0, SPL2to6kHz < 90) %>%
+  ggplot(aes(herring.hs, SPL2to3.5kHz/SPL, group = as.factor(herring.hs))) +
+  facet_grid(site~boat) + geom_violin() +
+  geom_jitter(width = 0.1, height = 0,  alpha=0.3) + theme_sleek()
+
+# filter(dat0, SPL < 110) %>%
+filter(dat0, SPL2to6kHz < 90) %>%
+  ggplot(aes(herring.hs, SPL6to24kHz/SPL, group = as.factor(herring.hs))) +
+  facet_grid(site~boat) +geom_violin() +
+  geom_jitter(width = 0.1, height = 0,  alpha=0.3) + theme_sleek()
+
+
+### Sort 1 min samples ####
+# I've add additional sort criteria with #, but those are not what we used. 
+quiet_samp_counts <- dat %>% 
+  filter(SPL2to6kHz < 89 & herring.hs >= 3) %>%
+  # filter(SPL < 100 & herring.hs >= 3) %>%
   group_by(site, herring.hs) %>% summarise(n = n())%>% 
   mutate(spl_class = "quiet")
 
-quiet_samp_mins <- dat %>% filter(SPL2to6kHz < 89 & herring.hs >= 3) %>% 
+quiet_samp_mins <- dat %>% 
+  filter(SPL2to6kHz < 89 & herring.hs >= 3) %>%
+  # filter(SPL < 100 & herring.hs >= 3) %>% 
   mutate(spl_class = "quiet")%>% 
-  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz) 
+  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz)
+  # select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.2to1kHz, SPL2to3.5kHz, SPL6to24kHz) 
 
-mid_samp_counts <- dat %>% filter(SPL2to6kHz >= 90 & SPL2to6kHz < 99 & herring.hs >= 3) %>% 
+mid_samp_counts <- dat %>% 
+  filter(SPL2to6kHz >= 90 & SPL2to6kHz < 99 & herring.hs >= 3) %>%
+  # filter(SPL >= 100 & SPL < 130 & herring.hs >= 3) %>% 
   group_by(site, herring.hs) %>% summarise(n = n())%>% 
   mutate(spl_class = "mid")
 
-mid_samp_mins <- dat %>% filter(SPL2to6kHz >= 90 & SPL2to6kHz < 99 & herring.hs >= 3) %>% 
+mid_samp_mins <- dat %>% 
+  filter(SPL2to6kHz >= 90 & SPL2to6kHz < 99 & herring.hs >= 3) %>%
+  # filter(SPL >= 100 & SPL < 130 & herring.hs >= 3) %>% 
   mutate(spl_class = "mid") %>% 
-  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz) 
+  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz)
+  # select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.2to1kHz, SPL2to3.5kHz, SPL6to24kHz) 
 
-loud_samp_counts <- dat %>% filter(SPL2to6kHz >= 100 & herring.hs >= 1) %>% 
+loud_samp_counts <- dat %>% 
+  filter(SPL2to6kHz >= 100 & herring.hs >= 1) %>%
+  # filter(SPL >= 130 & herring.hs >= 1) %>% 
   group_by(site, herring.hs) %>% summarise(n = n())%>% 
   mutate(spl_class = "loud")
 
-loud_samp_mins <- dat %>% filter(SPL2to6kHz >= 100 & herring.hs >= 1) %>% 
+loud_samp_mins <- dat %>%   
+  filter(SPL2to6kHz >= 100 & herring.hs >= 1) %>%
+  # filter(SPL >= 130 & herring.hs >= 1) %>% 
   mutate(spl_class = "loud")%>% 
-  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz) 
-
+  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz)
+  # select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.2to1kHz, SPL2to3.5kHz, SPL6to24kHz) 
 
 samp_counts <- bind_rows(quiet_samp_counts, mid_samp_counts, loud_samp_counts)
 
 samp_mins <- bind_rows(quiet_samp_mins, mid_samp_mins, loud_samp_mins)
 
 sort(unique(samp_mins$filename))
-
-write_csv(samp_mins, "herring3splsortedmins.csv")
-
+# write_csv(samp_mins, "herring3splsortedmins.csv")
 
 # # only Denman has level 3 boat and .hs together
 # ds3 <- ds1 %>% filter(boat > 2, herring.hs > 0) 
 
 
-# 15 min samples
-
+#### COMPILE 15 min samples ####
 
 d2<-read.csv("raw-annotations/Denman_15min_200308.csv", stringsAsFactors = F
 ) %>% mutate(site = "Denman (2020)") 
@@ -222,13 +373,10 @@ dat2$samp.min <- 15
 
 samp_files <- dat2 %>% filter(herring.hs >=2)
 sort(unique(samp_files$filename))
-write_csv(samp_files, "herring3files.csv")
-
+# write_csv(samp_files, "herring3files.csv")
 
 
 ds15 <- dat2 %>% group_by(site, boat, herring.hs) %>% summarise(n = n())
-
-
 
 # merge 1 min samples into average for 15 min
 dat1 <- bind_rows(d, c, p, s) %>% group_by(filename, site) %>% 
@@ -268,8 +416,28 @@ alldat <- bind_rows(dat1, dat2) %>% filter(site !="Neck Point (2020)")%>%
   group_by(site) %>%
   mutate(SPL_st = scale(SPL), SPL_mean = attr(scale(SPL),"scaled:center"),
          SPL0.02to2kHz_st = scale(SPL0.02to2kHz), SPL0.02to2kHz_mean = attr(scale(SPL0.02to2kHz),"scaled:center"),
+         SPL0.2to1kHz_st = scale(SPL0.2to1kHz), SPL0.2to1kHz_mean = attr(scale(SPL0.2to1kHz),"scaled:center"),
          SPL2to6kHz_st = scale(SPL2to6kHz), SPL2to6kHz_mean = attr(scale(SPL2to6kHz),"scaled:center"),
+         SPL2to3.5kHz_st = scale(SPL2to3.5kHz), SPL2to3.5kHz_mean = attr(scale(SPL2to3.5kHz),"scaled:center"),
          SPL6to24kHz_st = scale(SPL6to24kHz), SPL6to24kHz_mean = attr(scale(SPL6to24kHz),"scaled:center")) %>% ungroup()
+
+
+# explore boats with violins
+ggplot(alldat, aes((boat), SPL))+ geom_point()
+ggplot(alldat, aes((boat), SPL0.2to1kHz))+ geom_point()
+ggplot(alldat, aes((boat), SPL0.02to2kHz))+ geom_point()
+ggplot(alldat, aes((boat), SPL2to3.5kHz, colour = site))+ geom_point()
+ggplot(alldat, aes((boat), SPL2to6kHz, colour = site))+ geom_point() # this appears to represent boat noise best
+ggplot(alldat, aes((boat), SPL6to24kHz))+ geom_point()
+
+m1 <- lm(SPL2to3.5kHz~boat*SPL, data = alldat)
+summary(m1)
+alldat$resid_2to3.5 <- residuals(m1)
+m2 <- lm(SPL2to6kHz~boat, data = alldat)
+alldat$resid_2to6 <- residuals(m2)
+
+ggplot(alldat, aes(herring.hs, resid_2to3.5, colour = site))+ geom_point()
+ggplot(alldat, aes(herring.hs, resid_2to6, colour = site))+ geom_point()
 
 ### data exploration
 
@@ -286,108 +454,14 @@ sample_w_gulls <- alldat %>% filter(gull > 0) %>% group_by(site) %>% summarise(n
 sample_1_he_frt <- dat %>% filter(herring.frt > 0) 
 sample_1_he_p <- dat %>% filter(herring.p > 0) 
 
-
 ## boat noise vs. herring activity
 # ggplot(dat2, aes(boat, herring.hs, colour = site)) + geom_jitter(height = 0, width = 0.2)
 ggplot(ds1, aes(boat, herring.hs, size = n, colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
 ggplot(ds15, aes(boat, herring.hs, size = n, colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
 
+
 ggplot(dat, aes(SPL, herring.hs,  colour = site)) + geom_point() + facet_wrap(~site) +theme_sleek()
-
 ggplot(alldat, aes(SPL, herring.hs,  colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
-ggplot(alldat, aes(SPL0.02to2kHz, herring.hs,  colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
-ggplot(alldat, aes(SPL2to6kHz, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
-ggplot(alldat, aes(SPL6to24kHz, herring.hs,  colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
-
-
-dat0 <- dat %>% filter(site != "Neck Point (2020)") %>% 
-  group_by(site) %>%
-  mutate(SPL_st = scale(SPL), SPL_mean = attr(scale(SPL),"scaled:center"),
-         SPL0.02to2kHz_st = scale(SPL0.02to2kHz), SPL0.02to2kHz_mean = attr(scale(SPL0.02to2kHz),"scaled:center"),
-         SPL2to6kHz_st = scale(SPL2to6kHz), SPL2to6kHz_mean = attr(scale(SPL2to6kHz),"scaled:center"),
-         SPL6to24kHz_st = scale(SPL6to24kHz), SPL6to24kHz_mean = attr(scale(SPL6to24kHz),"scaled:center")) %>% 
-  #filter(site != "Denman (2020)") %>% 
-  # filter(herring.hs %in% c(0,2,3)) %>%
-  filter(SPL < 120) %>%
-  filter(boat < 3) %>%
-  ungroup() 
-
-
-ggplot(dat0, aes(SPL2to6kHz/SPL0.02to2kHz, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
-ggplot(dat0, aes(SPL2to6kHz-SPL6to24kHz, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
-ggplot(dat0, aes((SPL0.02to2kHz+SPL6to24kHz)/2, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
-
-
-ggplot(dat0, aes(SPL2to6kHz-SPL6to24kHz, herring.hs,  colour = site)) + geom_point(alpha=0.3) + facet_wrap(~site) + theme_sleek()
-
-# ggplot(dat0, aes(SPL0.02to2kHz, SPL6to24kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~site) + theme_sleek()
-# ggplot(dat0, aes(SPL0.02to2kHz, SPL2to6kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~site) + theme_sleek()
-# ggplot(dat0, aes(SPL2to6kHz, SPL6to24kHz, alpha = herring.hs)) + geom_point() + facet_wrap(~site) + theme_sleek()
-
-
-
-ggplot(dat0, aes(SPL6to24kHz, SPL2to6kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
-ggplot(dat0, aes(SPL0.02to2kHz, SPL2to6kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
-ggplot(dat0, aes(SPL0.02to2kHz, SPL6to24kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
-
-ggplot(dat0, aes(SPL, SPL2to6kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
-ggplot(dat0, aes(SPL,SPL0.02to2kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
-ggplot(dat0, aes(SPL, SPL6to24kHz, alpha = herring.hs, colour = site)) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
-
-
-ggplot(dat0, aes(SPL, SPL2to6kHz, alpha = herring.hs, colour = as.factor(boat))) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
-ggplot(dat0, aes(SPL6to24kHz, SPL2to6kHz, alpha = herring.hs, colour = as.factor(boat))) + geom_point() + facet_wrap(~herring.hs) + theme_sleek()
-
-
-ggplot(dat0, aes(as.factor(herring.hs), SPL0.02to2kHz)) + geom_violin() + theme_sleek()
-ggplot(dat0, aes(as.factor(herring.hs), SPL2to6kHz)) + geom_violin() + theme_sleek()
-ggplot(dat0, aes(as.factor(herring.hs), SPL6to24kHz)) + geom_violin() + theme_sleek()
-
-ggplot(dat0, aes(as.factor(herring.hs), (SPL6to24kHz)/SPL)) + geom_violin() + theme_sleek()
-
-ggplot(dat, aes(as.factor(boat), SPL)) + geom_violin() + theme_sleek() + ylim(80, 140)
-ggplot(dat, aes(as.factor(boat), SPL0.02to2kHz)) + geom_violin() + theme_sleek() + ylim(80, 140)
-ggplot(dat, aes(as.factor(boat), SPL2to6kHz)) + geom_violin() + theme_sleek()+ ylim(80, 140)
-ggplot(dat, aes(as.factor(boat), SPL6to24kHz)) + geom_violin() + theme_sleek()+ ylim(80, 140)
-ggplot(dat, aes(as.factor(boat), (SPL0.02to2kHz+SPL6to24kHz)/2)) + geom_violin() + theme_sleek()+ ylim(80, 140)
-
-
-ggplot(alldat, aes(SPL, (SPL0.02to2kHz+SPL6to24kHz)/2)) + geom_point()
-ggplot(alldat, aes(SPL, SPL2to6kHz/(SPL0.02to2kHz+SPL6to24kHz)/2, colour = (boat))) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)
-
-ggplot(alldat, aes(SPL, SPL2to6kHz/(SPL0.02to2kHz+SPL6to24kHz)/2, colour = (herring.hs), alpha= -boat)) + geom_point() + scale_color_viridis_c()+ theme_sleek()
-
-ggplot(filter(alldat, boat < 2.2), aes(SPL, SPL2to6kHz/(SPL0.02to2kHz+SPL6to24kHz)/2, colour = (herring.hs)
-                                       #, alpha= -boat
-                                       )) + geom_point() + scale_color_viridis_c()+ theme_sleek()
-
-
-ggplot(filter(alldat, boat < 2.2), aes(SPL0.02to2kHz, SPL2to6kHz/SPL6to24kHz, colour = (herring.hs)
-                                       #, alpha= -boat
-)) + geom_point() + scale_color_viridis_c()+ theme_sleek()+ facet_wrap(~site)
-
-
-ggplot(alldat, aes(SPL_st, SPL2to6kHz_st, colour = (boat))) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)
-ggplot(alldat, aes(SPL_st, SPL0.02to2kHz_st, colour = (boat))) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)
-
-ggplot(alldat, aes(SPL2to6kHz_st, SPL0.02to2kHz_st, colour = (herring.hs))) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)+ facet_wrap(~site)
-
-ggplot(alldat, aes(SPL_st, SPL0.02to2kHz_st-SPL2to6kHz_st, colour = (herring.hs))) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)+ facet_wrap(~site)
-
-ggplot(alldat, aes(SPL_st, SPL0.02to2kHz_st-(SPL2to6kHz_st+SPL6to24kHz_st), colour = (herring.hs), alpha= -boat)) + geom_point()+ theme_sleek() + scale_color_viridis_c(option="A", end = 0.6)+ facet_wrap(~site)
-
-ggplot(dat0, aes(as.factor(herring.hs), SPL0.02to2kHz_st-(SPL2to6kHz_st+SPL6to24kHz_st))) + geom_violin()+ theme_sleek()
-#+ scale_color_viridis_c(option="A", end = 0.6)+ facet_wrap(~site)
-
-
-
-ggplot(alldat, aes(SPL2to6kHz, (SPL0.02to2kHz+SPL6to24kHz)/2, colour = (herring.hs), alpha= -boat)) + geom_point() + scale_color_viridis_c()+ theme_sleek()
-
-ggplot(dat, aes(SPL2to6kHz, (SPL0.02to2kHz+SPL6to24kHz)/2, colour = (herring.hs), alpha= -boat)) + geom_point() + 
-  scale_color_viridis_c()+ facet_wrap(~herring.hs) + theme_sleek()
-
-
-ggplot(alldat, aes((SPL2to6kHz+SPL6to24kHz)/2, SPL0.02to2kHz, colour = (herring.hs), alpha= -boat)) + geom_point() + scale_color_viridis_c()
 
 
 # combined
@@ -425,7 +499,6 @@ alldat %>% group_by(site, splahes, herring.hs) %>% summarise(n = n())%>%
 alldat %>% group_by(site, fish.knock, herring.hs) %>% summarise(n = n())%>%
   ggplot(aes(fish.knock, herring.hs, size = n, colour = site)) + 
   geom_point(alpha = 0.75) +facet_wrap(~site) + theme_sleek()
-
 
 ggplot(alldat, aes(daysintosample, herring.hs, colour = site)) + geom_point() + facet_wrap(~site) + theme_sleek()
 
@@ -470,7 +543,7 @@ ggsave("herring-time-by-day-mean-spl-alpha.png", height = 3, width = 6)
 
 
 alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(d, time, fill = herring.hs, alpha = -(SPL2to6kHz_st))) + geom_tile(width=1, height=0.5) + 
+  ggplot(aes(d, time, fill = herring.hs, alpha = -(SPL2to6kHz))) + geom_tile(width=1, height=0.5) + 
   geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.5)+
   scale_fill_viridis_c("Herring\nScore") + 
   scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
