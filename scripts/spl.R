@@ -156,19 +156,18 @@ dir.create(file.path("data", paste0(loc, "_", file_prefix, "_raw_", welch_lab, "
 paste0(loc, "_", file_prefix, "_raw_", welch_lab, "s")
 
 
-# d <- readRDS(file.choose())
-d <- readRDS(here::here("data", paste0(loc, "_", file_prefix, "_raw_", welch_lab, "s/Conk_psdfiles_Abs_Broadband_96000ptHannWindow_5000pcOlap.rds")))
+if (set_lcut == 20 & set_hcut == "none"){band_lab <- "broadband" } else {band_lab <- paste0(set_lcut/1000,"to", set_hcut/1000, "kHz")}
+
+d <- readRDS(file.choose())
+# d <- readRDS(here::here("data", paste0(loc, "_", file_prefix, "_raw_", welch_lab, "s/Conk_psdfiles_Abs_Broadband_96000ptHannWindow_5000pcOlap.rds")))
 # d <- readRDS(here::here("data", paste0(loc, "_", file_prefix, "_raw_", welch_lab, "s/Conk_psdfiles_Abs_Broadband_96000ptHannWindow_5000pcOlap", band_lab,".rds")))
 
 
-dt <- as.POSIXlt.numeric(as.numeric(d[2:nrow(d),1]), origin = "1970-01-01" ) # extract datetime from first col
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+dt <- as.POSIXlt.numeric(as.numeric(d[2:nrow(d),1]), origin = "1970-01-01" ) # extract datetime from first col  
 d1 <- d[2:nrow(d), 2] # with SPL this is a vector
 d2 <- as_tibble(t(d1))
 colnames(d2) <- dt
 
-
-if (set_lcut == 20 & set_hcut == "none"){band_lab <- "broadband" } else {band_lab <- paste0(set_lcut/1000,"to", set_hcut/1000, "kHz")}
 
 d3 <- d2 %>% 
   pivot_longer(
