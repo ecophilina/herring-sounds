@@ -194,12 +194,38 @@ p5 <- ggplot(filter(dat0,
   facet_wrap(~site) +
   theme_sleek()
 
-
-
-
 p1 + p4 + p2 + p5 + patchwork::plot_layout(nrow =2, guides = "collect")
 
 ggsave("freqbinnedSPLunder110db.pdf", width = 10, height = 7)
+
+
+# checking ratio of herring bands to low range: SPL2to6kHz/SPL0.02to2kHz
+dat0$herring <- ifelse(dat0$herring.hs== 0, 0, 1)
+
+(p6 <- ggplot(filter(dat0),aes(as.factor(herring), SPL2to6kHz/SPL0.02to2kHz, colour =herring.hs)) + 
+    geom_boxplot() + 
+    scale_colour_viridis_c(option = "B", end = 0.8, begin = 0.3, direction = -1) +facet_wrap(~site) +
+    theme_sleek())
+
+(p6 <- ggplot(filter(dat0),
+              aes(as.factor(herring.hs), SPL2to3.5kHz/SPL0.02to2kHz, colour =herring.hs)) + 
+    geom_boxplot() + 
+    scale_colour_viridis_c(option = "B", end = 0.8, begin = 0.3, direction = -1) +
+    facet_wrap(~site) +
+    theme_sleek())
+
+
+(p6 <- ggplot(filter(dat0, 
+                     SPL < 110),
+              # SPL2to6kHz < 90),
+              aes(SPL0.02to2kHz, SPL2to6kHz, colour =herring.hs)) + 
+    geom_point(alpha = 0.5) + 
+    scale_colour_viridis_c(option = "B", end = 0.8, begin = 0.3, direction = -1) +
+    facet_wrap(~site) +
+    theme_sleek())
+
+
+
 
 # explore by boat score
 ggplot(dat0, aes(SPL2to6kHz, SPL2to3.5kHz, colour = as.factor(boat)), alpha = 0.5) + geom_point() + 
