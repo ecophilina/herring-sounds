@@ -42,3 +42,12 @@ bp<-ggplot(data=hs)+
 lowhz/highhz/peakhz/duration/inbandpower/peakp + plot_layout(guides = "collect")
 
 ggsave("figures/callcharacteristics.jpg")
+
+(sum.hs <- hs %>% #group_by(site, spl_class) %>% 
+  summarise(mean_peak = mean(`Peak Freq (Hz)`),
+            med_peak = median(`Peak Freq (Hz)`),
+            mean_low = mean(`Low Freq (Hz)`),
+            med_low = median(`Low Freq (Hz)`),
+            mean_high = mean(`High Freq (Hz)`),
+            med_high = median(`High Freq (Hz)`)))
+
