@@ -3,4 +3,4 @@ dir.create(file.path("raw-data"))
 dir.create(file.path("raw-annotations"))
 dir.create(file.path("raw-selections"))
 dir.create(file.path("edited-selections"))
-
+dir.create(file.path("wdata"))

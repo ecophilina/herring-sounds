@@ -1,11 +1,21 @@
 # Set the directory containing the files
-directory <- "data\\2018"
+
+## for sarcher
+# source_directory <- "data\\2018"
+# program_location <- 'C:\\Users\\sarcher\\AP\\AnalysisPrograms.exe'
+
+
+# shortraker
+source_directory <- "D:\\Herring2020\\Denman\\psdfiles"
+program_location <- 'C:\\Users\\shortraker\\AP\\AnalysisPrograms.exe'
+
+
 # The directory to store the results
 base_output_directory <- "wdata"
 
 # Get a list of audio files inside the directory
 # (Get-ChildItem is just like ls, or dir)
-files <- list.files(directory, pattern = "*.wav", full.names = TRUE)
+files <- list.files(source_directory, pattern = "*.wav", full.names = TRUE)
 
 # iterate through each file
 for(file in files) {
@@ -22,5 +32,6 @@ for(file in files) {
   command <- sprintf('audio2csv "%s" "Towsey.Acoustic.yml" "%s" ', file, output_directory)
   
   # finally, execute the command
-  system2('C:\\Users\\sarcher\\AP\\AnalysisPrograms.exe', command)
+  # system2('C:\\Users\\sarcher\\AP\\AnalysisPrograms.exe', command)
+  system2(program_location, command)
 }
