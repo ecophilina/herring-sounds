@@ -1,164 +1,48 @@
-# combine long-duration acoustic indices into one dataframe for plotting in R -----
+# explore long-duration acoustic indices -----
 
 library(tidyverse)
-library(purrr)
+# library(purrr)
 library(lubridate)
 library(ggsidekick)
 
-combine_towsey_data <- function(file_directory = "wdata/denman",
-                                summary_tables = "wdata/denman_sumtab") {
-  dir.create(file.path(summary_tables))
 
-  # move the summary tables to a separate folder
-  files_to_move <- list.files(file_directory,
-    pattern = "Towsey.Acoustic.Indices.csv",
-    full.names = TRUE, recursive = T, include.dirs = T
-  )
-
-  filesstrings::file.move(files_to_move, summary_tables)
-
-  # list remaining csv files, all should contain various indices with 3 letter code in file name
-  files <- list.files(file_directory, pattern = ".csv", full.names = TRUE, recursive = T, include.dirs = T)
-  # files
-
-  all_data <- map_df(files, ~ read.csv(.x) %>% mutate(file = basename(.x)))
-
-  d <- all_data %>%
-    separate(file,
-      # starting from right and using negatives to allow stid lengths to differ
-      into = c("trap_id", "yr", "mnth", "day", "hr", "min", "sec", "program", "index_type", "ext"),
-      sep = c(-37, -35, -33, -31, -29, -27, -25, -7, -4)
-    ) %>%
-    # select(Index, trap_id, yr, mnth, d, hr, min, sec, program, index_type, ext)# pause here to check
-    mutate(
-      trap_id = as.numeric(trap_id),
-      minintofile = Index,
-      # this is the date-time the file started recording
-      file_dt = ymd_hms(paste(yr, mnth, day, hr, min, sec)),
-      # convert interval to seconds and double to fill in gaps
-      datetime = file_dt + (minintofile * 60), 
-      # convert interval to seconds and double to fill in gaps
-      plot_time = file_dt + (minintofile * 60 * 2), 
-      yr = year(datetime),
-      mnth = month(datetime),
-      day = day(datetime),
-      hr = hour(datetime),
-      min = minute(datetime),
-      sec = second(datetime)
-    ) %>%
-    select(-Index, -ext) # %>%
-
-  d_long <- d %>% pivot_longer(1:(ncol(d) - 13), names_to = "freq_bin", values_to = "score")
-  d_long$freq_bin_num <- as.numeric(str_replace(d_long$freq_bin, "c", ""))
-
-  d_long
-}
+# set these for a specific machine
+# where to put the compiled dataframe?
+output_parent_directory <- "data/"
 
 
-#
-# d_long <- combine_towsey_data()
-# d_long$site <- "Denman (2020)"
-# saveRDS(d_long, "data/towsey-indices-denman.rds")
-# 
-# # for later:
-# d_long <- combine_towsey_data(file_directory = "wdata/collishaw",
-#                               summary_tables = "wdata/collishaw_sumtab")
-# d_long$site <- "Collishaw (2020)"
-# saveRDS(d_long, "data/towsey-indices-collishaw.rds")
-# 
-# d_long <- combine_towsey_data(file_directory = "wdata/neckpt",
-#                               summary_tables = "wdata/neckpt_sumtab")
-# d_long$site <- "Neck Point (2021)"
-# saveRDS(d_long, "data/towsey-indices-neckpt.rds")
+# choose which data set/sample to compile
+site_file_name <- "denman"
+# site_file_name <- "collishaw"
+# site_file_name <- "neckpt"
 
+d <- readRDS(paste0(output_parent_directory, "towsey-summary-scores.rds")) 
 
+glimpse(d)
+d2 <- d %>% pivot_longer(1:23, names_to = "index_type", values_to = "score")
 
-
-### merge in annotations
-# ld <- readRDS("data/towsey-indices-denman.rds") 
-ld <- readRDS("data/towsey-indices-collishaw.rds") 
-# ld <- readRDS("data/towsey-indices-denman.rds") 
-
-unique(ld$index_type)
-
-# d <- read.csv("raw-annotations/Denman_1min_200306.csv", stringsAsFactors = F) %>% 
-#   mutate(site = "Denman (2020)")
-d <-read.csv("raw-annotations/Collishaw_1min_200306.csv", stringsAsFactors = F) %>% 
-  mutate(site = "Collishaw (2020)") %>% rename(herring.hs = herring.j)
-# d <-read.csv("raw-annotations/NeckPt_1min_210311.csv", stringsAsFactors = F) %>% 
-#   mutate(site = "Neck Point (2021)", 
-#          # only non-zero records are 1? so replaced by NAs
-#          herring.frt = as.integer(p$herring.frt)
-#          ) %>% rename(herring.hs = herring.j)
-
-# s<-read.csv("raw-annotations/NeckPtA_1min_200407.csv", stringsAsFactors = F
-# ) %>% mutate(site = "Neck Point (2020)")
-# s$invert.snap <- as.integer(s$invert.snap) # records overpowered by boat noise replaced by NAs
-
-d <- d %>%
-  separate(filename,
-    sep = c("\\."),
-    into = c("soundtrap", "datetime", "filetype"),
-    remove = F, extra = "merge"
-  ) %>%
-  separate(datetime,
-    into = c("year", "month", "day", "hr", "min", "sec"),
-    sep = c(-10, -8, -6, -4, -2),
-    remove = FALSE
-  ) %>%
-  mutate(
-    secintofile = samp.start.min * 60, # needed to correct error in csv data
-    minintofile = secintofile / 60,
-    # this is the date-time the file started recording
-    file_dt = ymd_hms(paste(year, month, day, hr, min, sec)), 
-    # convert interval to seconds and double to fill in gaps
-    datetime = file_dt + (minintofile * 60), 
-    # year = as.numeric(year),
-    # month = as.numeric(month),
-    # day = as.numeric(day),
-    hour = as.numeric(hr),
-    minute = as.numeric(min),
-    second = as.numeric(sec),
-    decimal_time = hour + (minute / 60) + (minintofile / 60),
-    bin15min = ifelse(min < 30, 0, 30)
-  ) %>%
-  select(-datetime, -filetype, -year, -month, -day, -hr, -min, -sec)
-
-dat <- left_join(d, ld) %>% select(-trap_id, -program)
-
-# # double check merge worked
-# .dat <- filter(dat, 
-#                index_type == "ACI" &
-#                freq_bin_num == 10) %>% View()
-
-
-# convert freq bins into approximate kHz
-# apparently wav file has been downsampled to 22050 sample rate
-# this maxes out at 11025 Hz
-unique(dat$freq_bin_num)
-dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
-unique(dat$kHz)
-
-# check density differences with herring
-dat %>% ggplot(aes(score, 
+# check density differences with herring for summary index values
+d2 %>% ggplot(aes(score,
                    fill = as.factor(herring.hs),
-                   colour = as.factor(herring.hs))) + 
-  geom_density(alpha = 0.5) + 
+                   colour = as.factor(herring.hs)
+)) +
+  geom_density(alpha = 0.5) +
   facet_wrap(~index_type, scales = "free") +
-  scale_fill_viridis_d() + scale_colour_viridis_d() + theme_sleek()
+  scale_fill_viridis_d() +
+  scale_colour_viridis_d() +
+  theme_sleek()
 
-
-# # # Plot correlation matrix - too slow 
-# 
-# dat2 <- dat %>% filter(minintofile != 0 & kHz > 0.1 & kHz < 10.5) %>% 
+# # # Plot correlation matrix - too slow at frequency level, worth exploring here?
+#
+# dat2 <- dat %>% filter(minintofile != 0 & kHz > 0.1 & kHz < 10.5) %>%
 #   select(plot_time, herring.hs, kHz, index_type, score) %>%
 #   pivot_wider(names_from = "index_type", values_from = "score")
-# 
+#
 # dat_he <- dat2 %>% filter(herring.hs > 0)
 # dat_no <- dat2 %>% filter(herring.hs == 0)
-# 
+#
 # dat3 <- dat2[4:17]
-# 
+#
 # c <- cor(dat3)
 # round(c, 2)
 
@@ -171,6 +55,46 @@ dat %>% ggplot(aes(score,
 # pairs(dat3,
 #       upper.panel = NULL,         # Disabling the upper panel
 #       diag.panel = panel.hist)    # Adding the histograms
+
+
+
+### merge frequency level scores with summary that contains annotations----
+
+ld <- readRDS(paste0(output_parent_directory, "towsey-indices-", site_file_name, ".rds"))
+# unique(ld$index_type)
+unique(ld$site)
+
+# to test if join working as should...
+# %>% select("site", "file_dt", "minintofile", "herring.hs") 
+# compare with original dataframe length
+dat <- inner_join(ld, d) %>% select(-trap_id, -program)
+# Joining, by = c("trap_id", "yr", "mnth", "day", "hr", "min", "sec", "file_dt", "minintofile", "datetime", "plot_time", "site")
+
+# # other checks to see if merge worked
+# range(ld$file_dt)
+# range(d$file_dt)
+# .dat <- filter(dat,
+#                index_type == "ACI" &
+#                freq_bin_num == 10) %>% View()
+
+# convert freq bins into approximate kHz
+# apparently wav file has been downsampled to 22050 sample rate
+# this maxes out at 11025 Hz
+unique(dat$freq_bin_num)
+dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
+unique(dat$kHz)
+
+# check density differences with herring at the frequency level
+dat %>% ggplot(aes(score,
+  fill = as.factor(herring.hs),
+  colour = as.factor(herring.hs)
+)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~index_type, scales = "free") +
+  scale_fill_viridis_d() +
+  scale_colour_viridis_d() +
+  theme_sleek()
+
 
 
 plot_single_index <- function(data,
@@ -268,7 +192,7 @@ false_colour_plot <- function(indices = c("ENT", "EVN", "ACI"),
     geom_raster() +
     scale_colour_identity() +
     scale_fill_identity() +
-    scale_x_datetime(breaks = scales::pretty_breaks(n = 6)) + 
+    scale_x_datetime(breaks = scales::pretty_breaks(n = 6)) +
     coord_cartesian(expand = FALSE) +
     theme_sleek() +
     theme(
@@ -282,7 +206,7 @@ false_colour_plot()
 # alternative order on default choices
 # false_colour_plot(c("EVN", "ENT", "ACI"))
 
-unique(d_long$index_type)
+unique(dat$index_type)
 # "ACI"
 # "BGN": range is all negative so must take absolute value first?
 # "CVR" "DIF" "ENT" "EVN" "OSC" "PMN" "RHZ" "RNG" "RPS" "RVT" "SPT" "SUM"
@@ -293,7 +217,7 @@ false_colour_plot(c("SUM", "ENT", "DIF"))
 false_colour_plot(c("RPS", "ENT", "ACI"))
 
 d <- dat %>%
-  filter(index_type %in% c("RHZ", "RNG", "RPS", "SPT", "SUM" )) %>%
+  filter(index_type %in% c("RHZ", "RNG", "RPS", "SPT", "SUM")) %>%
   select(plot_time, kHz, index_type, score, herring.hs) %>%
   pivot_wider(names_from = "index_type", values_from = "score") %>%
   select(-plot_time, -kHz)
@@ -316,7 +240,7 @@ g <- false_colour_plot(c("BGN", "CVR", "OSC"))
 (g + geom_point(
   data = filter(dat, index_type == "ACI" & herring.hs > 0),
   aes(plot_time,
-      y = 10 # , alpha = herring.hs
+    y = 10 # , alpha = herring.hs
   ),
   # colour = "black",
   colour = "white",
@@ -327,9 +251,9 @@ g <- false_colour_plot(c("BGN", "CVR", "OSC"))
 ggsave("figs/false-colour-spectrogram-collishaw-BGN-CVR-OSC.pdf", width = 12, height = 3)
 
 
-# 
+#
 # g <- false_colour_plot(c("BGN", "OSC","ACI"))
-# 
+#
 # (g + geom_point(
 #   data = filter(dat, index_type == "ACI" & herring.hs > 0),
 #   aes(plot_time,
@@ -339,13 +263,13 @@ ggsave("figs/false-colour-spectrogram-collishaw-BGN-CVR-OSC.pdf", width = 12, he
 #   colour = "white",
 #   inherit.aes = F, size = 2, shape = "|"
 # ))
-# 
+#
 # ggsave("figs/false-colour-spectrogram-denman-BGN-OSC-ACI.pdf", width = 12, height = 3)
-# 
-# 
-# 
+#
+#
+#
 # g <- false_colour_plot()
-# 
+#
 # (g + geom_point(
 #   data = filter(dat, index_type == "ACI" & herring.hs > 0),
 #   aes(plot_time,
@@ -355,6 +279,6 @@ ggsave("figs/false-colour-spectrogram-collishaw-BGN-CVR-OSC.pdf", width = 12, he
 #   colour = "white",
 #   inherit.aes = F, size = 2, shape = "|"
 # ))
-# 
+#
 # ggsave("figs/false-colour-spectrogram-denman-ENT-EVN-ACI.pdf", width = 12, height = 3)
-# 
+#
