@@ -5,9 +5,11 @@ library(tidyverse)
 library(lubridate)
 library(ggsidekick)
 
+# run if not done before
+# source("scripts/organize-acoustic-indices.R") 
 
 # set these for a specific machine
-# where to put the compiled dataframe?
+# where to find the compiled dataframes?
 output_parent_directory <- "data/"
 
 
