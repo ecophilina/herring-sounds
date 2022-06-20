@@ -223,55 +223,59 @@ false_colour_plot <- function(indices = c("ENT", "EVN", "ACI"),
     ggtitle(paste0(.d$site[1]), subtitle = paste0("bars at top indicate samples with herring calls (pale blue = 1 min resolution; grey = 15 min resolution; white = herring sounds dominate > 10% of time)\nred = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]))
 }
 
-add_herring_to_FCP <- function(FCP){
-  FCP + geom_point(
-  data = filter(dat, 
-                index_type == "ACI" & herring.hs %in% c(1,2) & samp.tot.sec == 60),
-  aes(plot_time,
-      y = 10#, alpha = herring.hs
+add_herring_to_FCP <- function(FCP, data = dat){
+  
+  .dat1 <- filter(dat, index_type == "ACI" & samp.tot.sec == 60)
+  .dat2 <- filter(dat, index_type == "ACI" & samp.tot.sec == 900)
+  g <- FCP
+  if(max(.dat1$herring.hs, na.rm = T) > 0) {
+    g <- g + geom_point(
+  data = filter(.dat1,  herring.hs %in% c(1,2)),
+  aes(plot_time, y = 10#, alpha = herring.hs
   ),
-  # colour = "black",
   colour = "lightblue",
   inherit.aes = F, size = 2, shape = "|"
-) + geom_point(
-  data = filter(dat, 
-                index_type == "ACI" & herring.hs > 2 & samp.tot.sec == 60),
-  aes(plot_time,
-      y = 10#, alpha = herring.hs
+) 
+  }
+  if(max(.dat2$herring.hs, na.rm = T) > 0) {
+    g <- g + geom_point(
+  data = filter(.dat2, herring.hs %in% c(1)),
+  aes(plot_time, y = 10 # , alpha = herring.hs
   ),
-  # colour = "black",
-  colour = "white",
-  inherit.aes = F, size = 2, shape = "|"
-) + geom_point(
-  data = filter(dat,
-                index_type == "ACI" & herring.hs %in% c(1) & samp.tot.sec == 900),
-  aes(plot_time,
-      y = 10 # , alpha = herring.hs
-  ),
-  # colour = "black",
   colour = "grey50",
   inherit.aes = F, size = 2, shape = "|"
-) + geom_point(
-  data = filter(dat,
-                index_type == "ACI" & herring.hs == 2 & samp.tot.sec == 900),
-  aes(plot_time,
-      y = 10 #, alpha = herring.hs
+) 
+  }
+  
+  if(max(.dat1$herring.hs, na.rm = T) > 2) {
+  g <- g + geom_point(
+  data = filter(.dat1, herring.hs > 2),
+  aes(plot_time, y = 10
   ),
-  colour = "grey70",
-  # colour = "white",
-  inherit.aes = F, size = 2, shape = "|"
-) + geom_point(
-  data = filter(dat,
-                index_type == "ACI" & herring.hs > 2 & samp.tot.sec == 900),
-  aes(plot_time,
-      y = 10 #, alpha = herring.hs
-  ),
-  # colour = "grey80",
   colour = "white",
   inherit.aes = F, size = 2, shape = "|"
-)
+  ) 
+  }
+  
+  if(2 %in% unique(.dat2$herring.hs)) {
+  g <- g + geom_point(
+  data = filter(.dat2, herring.hs == 2),
+  aes(plot_time, y = 10 
+  ),
+  colour = "grey70",
+  inherit.aes = F, size = 2, shape = "|"
+  ) }
+  
+  if(max(.dat2$herring.hs, na.rm = T) > 2) {
+    g <- g + geom_point(
+  data = filter(.dat2, herring.hs > 2),
+  aes(plot_time, y = 10 
+  ),
+  colour = "white",
+  inherit.aes = F, size = 2, shape = "|"
+  )
+  }
 }
-
 
 # false_colour_plot()
 # alternative order on default choices
