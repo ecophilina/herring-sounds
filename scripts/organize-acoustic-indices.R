@@ -12,7 +12,7 @@ output_parent_directory <- "data/"
 # requires get-acoustic-indices.R to have been run for all sites in this list
 list_sites <- tribble(
   ~site_description, ~site_file_name,
-  # "Neck Point (2021)", "neckpt",
+  "Neck Point (2021)", "neckpt",
   "Denman (2020)", "denman",
   "Collishaw (2020)", "collishaw"
 )
@@ -71,6 +71,7 @@ combine_towsey_summary_tabs <- function(file_directory, summary_tables) {
 }
 
 # this runs above to combine summaries for all sites and adds in annotations ----
+# currently not adjusting for daylight savings time
 combine_with_annotations <- function(site_description, site_file_name, towsey_directory) {
   # browser()
   file_directory <- paste0(towsey_directory, site_file_name)
@@ -85,11 +86,15 @@ combine_with_annotations <- function(site_description, site_file_name, towsey_di
   if(site_file_name == "denman") {
     d <- read.csv("raw-annotations/Denman_1min_200306.csv", stringsAsFactors = F) %>%
       mutate(site = "Denman (2020)")
+    d2<-read.csv("raw-annotations/Denman_15min_200308.csv", stringsAsFactors = F) %>% 
+      mutate(site = "Denman (2020)") 
   }
   
   if(site_file_name == "collishaw") {
     d <-read.csv("raw-annotations/Collishaw_1min_200306.csv", stringsAsFactors = F) %>%
       mutate(site = "Collishaw (2020)") %>% rename(herring.hs = herring.j)
+    d2<-read.csv("raw-annotations/Collishaw_15min_200308.csv", stringsAsFactors = F) %>% 
+      mutate(site = "Collishaw (2020)") 
   }
   
   if(site_file_name == "neckpt") {
@@ -100,6 +105,8 @@ combine_with_annotations <- function(site_description, site_file_name, towsey_di
         herring.frt = as.integer(herring.frt)
       ) %>%
       rename(herring.hs = herring.j)
+    d2<-read.csv("raw-annotations/NeckPt_15min_210313.csv", stringsAsFactors = F) %>% 
+      mutate(site = "Neck Point (2021)") 
   }
   
   d <- d %>%
@@ -120,19 +127,53 @@ combine_with_annotations <- function(site_description, site_file_name, towsey_di
       file_dt = ymd_hms(paste(year, month, day, hr, min, sec)),
       # convert interval to seconds and double to fill in gaps
       datetime = file_dt + (minintofile * 60),
-      # year = as.numeric(year),
-      # month = as.numeric(month),
-      # day = as.numeric(day),
-      hour = as.numeric(hr),
-      minute = as.numeric(min),
-      second = as.numeric(sec),
-      decimal_time = hour + (minute / 60) + (minintofile / 60),
       bin15min = ifelse(min < 30, 0, 30)
     ) %>%
     select(-datetime, -filetype, -year, -month, -day, -hr, -min, -sec)
-  
-  dat <- left_join(s, d) 
-  dat
+
+ # browser()
+ 
+  d2 <- d2 %>%
+    separate(filename, sep=c("\\."), 
+             into=c("soundtrap","datetime","filetype"),
+             remove = F, extra = "merge") %>%
+    separate(datetime,
+             into = c("year","month","day","hr","min","sec"),
+             sep=c(-10,-8,-6,-4,-2),
+             remove=FALSE)%>%
+    mutate(samp.tot.sec = 900,
+           # this is the date-time the file started recording
+           file_dt = ymd_hms(paste(year, month, day, hr, min, sec)),
+           # d=as.numeric(day),
+           # hr=as.numeric(hr),
+           min=as.numeric(min),
+           # sec=as.numeric(sec),
+           bin15min = ifelse(min < 30, 0, 30)
+           ) %>% select(-datetime, -year, -month, -day, -hr, -min, -sec, -filetype) 
+  # %>%
+  #   mutate(
+  #     # correct daylight savings time to standard time
+  #     hr=case_when(
+  #       datetime > "200308013002" & datetime < "210000000000" ~ hr - 1,
+  #       datetime > "210314013110" ~ hr - 1,
+  #       TRUE ~ hr
+  #     ),
+  #     d=case_when(
+  #       hr < 0 ~ d - 1,
+  #       TRUE ~ d
+  #     ),
+  #     hr=case_when(
+  #       hr < 0 ~ 23,
+  #       TRUE ~ hr
+  #     ),
+  #     time = round(hr + (min/60), 1) #+ (sec/60/60)
+  #   ) #%>% group_by(site) %>% mutate(
+  #   #   daysintosample = (d-min(d))+ time/24 
+  #   # ) %>% ungroup()
+
+  dat1 <- inner_join(s, d)
+  dat2 <- inner_join(s, d2)
+  dat <- bind_rows(dat1,dat2)
 }
 
 data <- purrr::pmap_dfr(list_sites, combine_with_annotations)
@@ -188,6 +229,16 @@ combine_towsey_data <- function(file_directory) {
   d_long$freq_bin_num <- as.numeric(str_replace(d_long$freq_bin, "c", ""))
   d_long
 }
+
+
+# list_sites <- tribble(
+#   ~site_description, ~site_file_name,
+#   "Neck Point (2021)", "neckpt"
+#   # "Denman (2020)", "denman",
+#   # "Collishaw (2020)", "collishaw"
+# )
+# list_sites$towsey_directory <- towsey_directory
+
 
 combine_towsey_data_for_all <- function(site_description, site_file_name, towsey_directory) {
   file_directory <- paste0(towsey_directory, site_file_name)
