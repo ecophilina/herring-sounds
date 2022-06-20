@@ -14,8 +14,8 @@ output_parent_directory <- "data/"
 
 
 # choose which data set/sample to compile
-site_file_name <- "denman"
-# site_file_name <- "collishaw"
+# site_file_name <- "denman"
+site_file_name <- "collishaw"
 # site_file_name <- "neckpt"
 
 d <- readRDS(paste0(output_parent_directory, "towsey-summary-scores.rds")) 
@@ -33,6 +33,9 @@ d2 %>% ggplot(aes(score,
   scale_fill_viridis_d() +
   scale_colour_viridis_d() +
   theme_sleek()
+
+ggsave(paste0("figs/density-summary-index-values-all-sites.pdf"))
+
 
 # # # Plot correlation matrix - too slow at frequency level, worth exploring here?
 #
@@ -87,7 +90,9 @@ dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
 unique(dat$kHz)
 
 # check density differences with herring at the frequency level
-dat %>% ggplot(aes(score,
+# against 1min annotations
+dat %>% filter(samp.tot.sec == 60) %>%
+  ggplot(aes(score,
   fill = as.factor(herring.hs),
   colour = as.factor(herring.hs)
 )) +
@@ -97,7 +102,21 @@ dat %>% ggplot(aes(score,
   scale_colour_viridis_d() +
   theme_sleek()
 
+ggsave(paste0("figs/density-freq-level-1min-anno-", site_file_name, ".pdf"))
 
+# against 15 min annotations
+dat %>% filter(samp.tot.sec == 900) %>% 
+  ggplot(aes(score,
+             fill = as.factor(herring.hs),
+             colour = as.factor(herring.hs)
+  )) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~index_type, scales = "free") +
+  scale_fill_viridis_d() +
+  scale_colour_viridis_d() +
+  theme_sleek()
+
+ggsave(paste0("figs/density-freq-level-15min-anno-", site_file_name, ".pdf"))
 
 plot_single_index <- function(data,
                               index) {
@@ -118,42 +137,42 @@ plot_single_index <- function(data,
     ) +
     ggtitle(paste0(data$site[1]), subtitle = index)
 }
-
-g <- plot_single_index(dat, "ACI")
-
-# most promising
-g <- plot_single_index(dat, "BGN")
-
-# promising
-g <- plot_single_index(dat, "CVR")
-
-g <- plot_single_index(dat, "ENT")
-g <- plot_single_index(dat, "EVN")
-
-# maybe useful
-g <- plot_single_index(dat, "PMN")
-
-# looks promising
-g <- plot_single_index(dat, "OSC")
-
-g <- plot_single_index(dat, "RHZ")
-g <- plot_single_index(dat, "RNG")
-g <- plot_single_index(dat, "RPS")
-g <- plot_single_index(dat, "RVT")
-
-g <- plot_single_index(dat, "SPT")
-
-
-(g + geom_point(
-  data = filter(dat, index_type == "ACI" & herring.hs == 1),
-  aes(plot_time,
-    y = 10 # , alpha = herring.hs
-  ),
-  # colour = "black",
-  colour = "white",
-  inherit.aes = F, size = 2, shape = "|"
-))
-
+# 
+# g <- plot_single_index(dat, "ACI")
+# 
+# # most promising
+# g <- plot_single_index(dat, "BGN")
+# 
+# # promising
+# g <- plot_single_index(dat, "CVR")
+# 
+# g <- plot_single_index(dat, "ENT")
+# g <- plot_single_index(dat, "EVN")
+# 
+# # maybe useful
+# g <- plot_single_index(dat, "PMN")
+# 
+# # looks promising
+# g <- plot_single_index(dat, "OSC")
+# 
+# g <- plot_single_index(dat, "RHZ")
+# g <- plot_single_index(dat, "RNG")
+# g <- plot_single_index(dat, "RPS")
+# g <- plot_single_index(dat, "RVT")
+# 
+# g <- plot_single_index(dat, "SPT")
+# 
+# 
+# (g + geom_point(
+#   data = filter(dat, index_type == "ACI" & herring.hs == 1),
+#   aes(plot_time,
+#     y = 10 # , alpha = herring.hs
+#   ),
+#   # colour = "black",
+#   colour = "white",
+#   inherit.aes = F, size = 2, shape = "|"
+# ))
+# 
 
 false_colour_plot <- function(indices = c("ENT", "EVN", "ACI"),
                               data = dat) {
@@ -201,86 +220,100 @@ false_colour_plot <- function(indices = c("ENT", "EVN", "ACI"),
       axis.title.x = element_blank(),
       panel.background = element_rect(fill = "black")
     ) +
-    ggtitle(paste0(.d$site[1]), subtitle = paste0("white indicates samples with herring calls \nred = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]))
+    ggtitle(paste0(.d$site[1]), subtitle = paste0("bars at top indicate samples with herring calls (pale blue = 1 min resolution; grey = 15 min resolution; white = herring sounds dominate > 10% of time)\nred = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]))
 }
 
-false_colour_plot()
-# alternative order on default choices
-# false_colour_plot(c("EVN", "ENT", "ACI"))
-
-unique(dat$index_type)
-# "ACI"
-# "BGN": range is all negative so must take absolute value first?
-# "CVR" "DIF" "ENT" "EVN" "OSC" "PMN" "RHZ" "RNG" "RPS" "RVT" "SPT" "SUM"
-false_colour_plot(c("OSC", "CVR", "BGN"))
-false_colour_plot(c("PMN", "RHZ", "RNG"))
-false_colour_plot(c("RPS", "RVT", "SPT"))
-false_colour_plot(c("SUM", "ENT", "DIF"))
-false_colour_plot(c("RPS", "ENT", "ACI"))
-
-d <- dat %>%
-  filter(index_type %in% c("RHZ", "RNG", "RPS", "SPT", "SUM")) %>%
-  select(plot_time, kHz, index_type, score, herring.hs) %>%
-  pivot_wider(names_from = "index_type", values_from = "score") %>%
-  select(-plot_time, -kHz)
-
-cor(d)
-
-
-d <- dat %>%
-  filter(index_type %in% c("ACI", "BGN", "CVR", "OSC", "ENT", "EVN", "RNG")) %>%
-  select(plot_time, kHz, index_type, score, herring.hs) %>%
-  pivot_wider(names_from = "index_type", values_from = "score") %>%
-  select(-plot_time, -kHz)
-
-cor(d)
-
-
-
-g <- false_colour_plot(c("BGN", "CVR", "OSC"))
-
-(g + geom_point(
-  data = filter(dat, index_type == "ACI" & herring.hs > 0),
+add_herring_to_FCP <- function(FCP){
+  FCP + geom_point(
+  data = filter(dat, 
+                index_type == "ACI" & herring.hs %in% c(1,2) & samp.tot.sec == 60),
   aes(plot_time,
-    y = 10 # , alpha = herring.hs
+      y = 10#, alpha = herring.hs
+  ),
+  # colour = "black",
+  colour = "lightblue",
+  inherit.aes = F, size = 2, shape = "|"
+) + geom_point(
+  data = filter(dat, 
+                index_type == "ACI" & herring.hs > 2 & samp.tot.sec == 60),
+  aes(plot_time,
+      y = 10#, alpha = herring.hs
   ),
   # colour = "black",
   colour = "white",
   inherit.aes = F, size = 2, shape = "|"
-))
+) + geom_point(
+  data = filter(dat,
+                index_type == "ACI" & herring.hs %in% c(1) & samp.tot.sec == 900),
+  aes(plot_time,
+      y = 10 # , alpha = herring.hs
+  ),
+  # colour = "black",
+  colour = "grey50",
+  inherit.aes = F, size = 2, shape = "|"
+) + geom_point(
+  data = filter(dat,
+                index_type == "ACI" & herring.hs == 2 & samp.tot.sec == 900),
+  aes(plot_time,
+      y = 10 #, alpha = herring.hs
+  ),
+  colour = "grey70",
+  # colour = "white",
+  inherit.aes = F, size = 2, shape = "|"
+) + geom_point(
+  data = filter(dat,
+                index_type == "ACI" & herring.hs > 2 & samp.tot.sec == 900),
+  aes(plot_time,
+      y = 10 #, alpha = herring.hs
+  ),
+  # colour = "grey80",
+  colour = "white",
+  inherit.aes = F, size = 2, shape = "|"
+)
+}
 
-# ggsave("figs/false-colour-spectrogram-denman-BGN-CVR-OSC.pdf", width = 12, height = 3)
-ggsave("figs/false-colour-spectrogram-collishaw-BGN-CVR-OSC.pdf", width = 12, height = 3)
+
+# false_colour_plot()
+# alternative order on default choices
+# false_colour_plot(c("EVN", "ENT", "ACI"))
+# 
+# unique(dat$index_type)
+# # "ACI"
+# # "BGN": range is all negative so must take absolute value first?
+# # "CVR" "DIF" "ENT" "EVN" "OSC" "PMN" "RHZ" "RNG" "RPS" "RVT" "SPT" "SUM"
+# false_colour_plot(c("OSC", "CVR", "BGN"))
+# false_colour_plot(c("PMN", "RHZ", "RNG"))
+# false_colour_plot(c("RPS", "RVT", "SPT"))
+# false_colour_plot(c("SUM", "ENT", "DIF"))
+# false_colour_plot(c("RPS", "ENT", "ACI"))
+# 
+# d <- dat %>%
+#   filter(index_type %in% c("RHZ", "RNG", "RPS", "SPT", "SUM")) %>%
+#   select(plot_time, kHz, index_type, score, herring.hs) %>%
+#   pivot_wider(names_from = "index_type", values_from = "score") %>%
+#   select(-plot_time, -kHz)
+# 
+# cor(d)
+# 
+# d <- dat %>%
+#   filter(index_type %in% c("ACI", "BGN", "CVR", "OSC", "ENT", "EVN", "RNG")) %>%
+#   select(plot_time, kHz, index_type, score, herring.hs) %>%
+#   pivot_wider(names_from = "index_type", values_from = "score") %>%
+#   select(-plot_time, -kHz)
+# 
+# cor(d)
+# 
 
 
-#
-# g <- false_colour_plot(c("BGN", "OSC","ACI"))
-#
-# (g + geom_point(
-#   data = filter(dat, index_type == "ACI" & herring.hs > 0),
-#   aes(plot_time,
-#     y = 10 # , alpha = herring.hs
-#   ),
-#   # colour = "black",
-#   colour = "white",
-#   inherit.aes = F, size = 2, shape = "|"
-# ))
-#
-# ggsave("figs/false-colour-spectrogram-denman-BGN-OSC-ACI.pdf", width = 12, height = 3)
-#
-#
-#
-# g <- false_colour_plot()
-#
-# (g + geom_point(
-#   data = filter(dat, index_type == "ACI" & herring.hs > 0),
-#   aes(plot_time,
-#       y = 10 # , alpha = herring.hs
-#   ),
-#   # colour = "black",
-#   colour = "white",
-#   inherit.aes = F, size = 2, shape = "|"
-# ))
-#
-# ggsave("figs/false-colour-spectrogram-denman-ENT-EVN-ACI.pdf", width = 12, height = 3)
-#
+g <- false_colour_plot(c("BGN", "RVT", "ACI")) %>% add_herring_to_FCP()
+ggsave(paste0("figs/false-colour-spectrogram-", site_file_name, "-BGN-ACI-RVT.pdf"), width = 12, height = 3)
+
+g <- false_colour_plot(c("BGN", "CVR", "OSC")) %>% add_herring_to_FCP()
+ggsave(paste0("figs/false-colour-spectrogram-", site_file_name, "-BGN-CVR-OSC.pdf"), width = 12, height = 3)
+
+g <- false_colour_plot(c("BGN", "OSC","ACI")) %>% add_herring_to_FCP()
+ggsave(paste0("figs/false-colour-spectrogram-", site_file_name, "-BGN-OSC-ACI.pdf"), width = 12, height = 3)
+
+g <- false_colour_plot(c("ENT", "EVN", "ACI")) %>% add_herring_to_FCP()
+ggsave(paste0("figs/false-colour-spectrogram-", site_file_name, "-ENT-EVN-ACI.pdf"), width = 12, height = 3)
+
