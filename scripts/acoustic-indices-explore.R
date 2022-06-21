@@ -14,8 +14,8 @@ output_parent_directory <- "data/"
 
 
 # choose which data set/sample to compile
-# site_file_name <- "denman"
-site_file_name <- "collishaw"
+site_file_name <- "denman"
+# site_file_name <- "collishaw"
 # site_file_name <- "neckpt"
 
 d <- readRDS(paste0(output_parent_directory, "towsey-summary-scores.rds")) 
@@ -91,13 +91,15 @@ unique(dat$kHz)
 
 # check density differences with herring at the frequency level
 # against 1min annotations
-dat %>% filter(samp.tot.sec == 60) %>%
+dat %>% filter(samp.tot.sec == 60) %>% 
+  group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
   ggplot(aes(score,
   fill = as.factor(herring.hs),
   colour = as.factor(herring.hs)
 )) +
   geom_density(alpha = 0.5) +
   facet_wrap(~index_type, scales = "free") +
+  scale_x_continuous(trans = "sqrt") +
   scale_fill_viridis_d() +
   scale_colour_viridis_d() +
   theme_sleek()
@@ -106,12 +108,14 @@ ggsave(paste0("figs/density-freq-level-1min-anno-", site_file_name, ".pdf"), wid
 
 # against 15 min annotations
 dat %>% filter(samp.tot.sec == 900) %>% 
+  group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
   ggplot(aes(score,
              fill = as.factor(herring.hs),
              colour = as.factor(herring.hs)
   )) +
   geom_density(alpha = 0.5) +
   facet_wrap(~index_type, scales = "free") +
+  scale_x_continuous(trans = "sqrt") +
   scale_fill_viridis_d() +
   scale_colour_viridis_d() +
   theme_sleek()
@@ -174,10 +178,12 @@ plot_single_index <- function(data,
 # ))
 # 
 
-false_colour_plot <- function(indices = c("ENT", "EVN", "ACI"),
+false_colour_plot <- function(indices,
                               data = dat) {
   .d <- data %>%
     filter(index_type %in% indices) %>%
+    group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
+    ungroup() %>%
     pivot_wider(names_from = "index_type", values_from = "score")
   # browser()
   # .d[!complete.cases(.d),] #Returns zero rows, no pixel is lacking any data
@@ -185,26 +191,11 @@ false_colour_plot <- function(indices = c("ENT", "EVN", "ACI"),
   r1 <- range(.d[[indices[1]]])
   r2 <- range(.d[[indices[2]]])
   r3 <- range(.d[[indices[3]]])
-
   # # Values must be btw 0-1
-  .d$r <- .d[[indices[1]]] / max(.d[[indices[1]]])
-  .d$g <- .d[[indices[2]]] / max(.d[[indices[2]]])
-  .d$b <- .d[[indices[3]]] / max(.d[[indices[3]]])
-
-  range(.d$r)
-  range(.d$g)
-  range(.d$b)
-
-  # if all values are negative could jsut use absolute values?
-  if (min(r1) <= 0 & max(r1) <= 0) {
-    .d$r <- 1 - abs(.d[[indices[1]]]) / max(abs(.d[[indices[1]]]))
-  }
-  if (min(r2) <= 0 & max(r2) <= 0) {
-    .d$g <- 1 - abs(.d[[indices[2]]]) / max(abs(.d[[indices[2]]]))
-  }
-  if (min(r3) <= 0 & max(r3) <= 0) {
-    .d$b <- 1 - abs(.d[[indices[3]]]) / max(abs(.d[[indices[3]]]))
-  }
+  
+  .d$r <- .d[[indices[1]]] 
+  .d$g <- .d[[indices[2]]] 
+  .d$b <- .d[[indices[3]]] 
 
   ggplot(
     data = filter(.d, minintofile != 0 & kHz > 0.1 & kHz < 10.5),
@@ -226,8 +217,8 @@ false_colour_plot <- function(indices = c("ENT", "EVN", "ACI"),
 add_herring_to_FCP <- function(FCP, 
                                data = dat){
   
-  .dat1 <- filter(dat, index_type == "ACI" & samp.tot.sec == 60)
-  .dat2 <- filter(dat, index_type == "ACI" & samp.tot.sec == 900)
+  .dat1 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 60)
+  .dat2 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 900)
   g <- FCP
   if(max(.dat1$herring.hs, na.rm = T) > 0) {
     g <- g + geom_point(
@@ -278,6 +269,8 @@ add_herring_to_FCP <- function(FCP,
   }
   # g <- g + ggtitle(paste0(.dat1$site[1]), 
   #   subtitle = paste0("bars at top indicate samples with herring calls (pale blue = 1 min resolution; grey = 15 min resolution; white = herring sounds dominate > 10% of time)\nred = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]))
+  ggsave(paste0("figs/false-colour-spectrogram-", paste(indices, collapse = "-"), "-", site_file_name, ".pdf"), 
+         width = 12, height = 3)
 }
 
 add_variable_to_FCP <- function(FCP, 
@@ -285,12 +278,12 @@ add_variable_to_FCP <- function(FCP,
                                 indices = c("ENT", "EVN", "ACI"), 
                                 data = dat){
   
-  .dat1 <- filter(dat, index_type == "ACI" & samp.tot.sec == 60)
-  .dat2 <- filter(dat, index_type == "ACI" & samp.tot.sec == 900)
+  .dat1 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 60)
+  .dat2 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 900)
   g <- FCP
   if(max(.dat1[var], na.rm = T) > 0) {
     g <- g + geom_point(
-      data = filter(.dat1, .data[[var]] %in% c(1,2)),
+      data = filter(.dat1, .data[[var]] %in% c(1,2,3)),
       aes(plot_time, y = 10#, alpha = {{var}}
       ),
       colour = "lightblue",
@@ -299,7 +292,7 @@ add_variable_to_FCP <- function(FCP,
   }
   if(max(.dat2[var], na.rm = T) > 0) {
     g <- g + geom_point(
-      data = filter(.dat2, .data[[var]] %in% c(1)),
+      data = filter(.dat2, .data[[var]] %in% c(1,2,3)),
       aes(plot_time, y = 10 # , alpha = {{var}}
       ),
       colour = "grey50",
@@ -340,6 +333,12 @@ add_variable_to_FCP <- function(FCP,
                       " (pale blue = 1 min resolution; grey = 15 min resolution; white = ", var, 
                       " dominate > 10% of time)\nred = ", indices[1], 
                       ", green = ", indices[2], ", blue = ", indices[3]))
+  
+  ggsave(paste0("figs/false-colour-spectrogram-", 
+                paste(indices, collapse = "-"), "-", 
+                site_file_name, "-", var, ".pdf"), 
+         width = 12, height = 3)
+  
 }
 # unique(dat$index_type)
 # # "ACI"
@@ -390,54 +389,54 @@ corPlot(d1, cex = 1.2)
 # no others seem very interesting
 # RVT, ACI and OSC all pretty correlated with waves  
 
-g <- false_colour_plot(c("ENT", "BGN", "RVT")) %>% add_herring_to_FCP()
-ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-RVT-", site_file_name, ".pdf"), width = 12, height = 3)
+# using vars with the strongest relationships with herring
+indices <- list(
+c("ENT", "BGN", "RVT"),
+c("ENT", "BGN", "RPS"),
+c("ENT", "BGN", "OSC"),
+c("ENT", "BGN", "ACI")
+)
 
-g <- false_colour_plot(c("ENT", "BGN", "RPS")) %>% add_herring_to_FCP()
-ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-RPS-", site_file_name, ".pdf"), width = 12, height = 3)
+for (i in indices){
+  g <- false_colour_plot(i) %>% add_herring_to_FCP()
+}
 
-g <- false_colour_plot(c("ENT", "BGN", "OSC")) %>% add_herring_to_FCP()
-ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-OSC-", site_file_name, ".pdf"), width = 12, height = 3)
 
-g <- false_colour_plot(c("ENT", "BGN", "ACI")) %>% add_herring_to_FCP()
-ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-ACI-", site_file_name, ".pdf"), width = 12, height = 3)
+# what about trying the less dominant variables?
 
-g <- false_colour_plot(c("ENT", "BGN", "ACI")) %>% add_variable_to_FCP(var = "waves", indices = c("ENT", "BGN", "ACI"))
-ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-ACI-", site_file_name, "-waves.pdf"), width = 12, height = 3)
+indices <- list(
+  c("BGN", "RVT", "ACI"), # collishaw inspired choices
+  c("BGN", "CVR", "RNG")  # denman inspired choices
+)
+for (i in indices){
+g <- false_colour_plot(i) %>% add_herring_to_FCP()
+}
 
-g <- false_colour_plot(c("ENT", "BGN", "OSC")) %>% add_variable_to_FCP(var = "waves", indices = c("ENT", "BGN", "OSC"))
-ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-OSC-", site_file_name, "-waves.pdf"), width = 12, height = 3)
 
-g <- false_colour_plot(c("ENT", "BGN", "OSC")) %>% add_variable_to_FCP(var = "rustling", indices = c("ENT", "BGN", "OSC"))
-ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-OSC-", site_file_name, "-rustling.pdf"), width = 12, height = 3)
+# explore some of the other annotation categories
+indices <- list(
+  c("ENT", "BGN", "ACI"),
+  c("ENT", "BGN", "OSC")
+)
+for (i in indices){
+  g <- false_colour_plot(i) %>% add_variable_to_FCP(var = "waves", indices = i)
+}
 
-g <- false_colour_plot(c("ENT", "BGN", "OSC")) %>% add_variable_to_FCP(var = "boat", indices = c("ENT", "BGN", "OSC"))
-ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-OSC-", site_file_name, "-boat.pdf"), width = 12, height = 3)
+indices <- list(
+  # c("ENT", "BGN", "ACI"),
+  c("ENT", "BGN", "OSC")
+)
 
-g <- false_colour_plot(c("ENT", "BGN", "OSC")) %>% add_variable_to_FCP(var = "tonal", indices = c("ENT", "BGN", "OSC"))
-ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-OSC-", site_file_name, "-tonal.pdf"), width = 12, height = 3)
+vars <- list(
+  "rustling",
+  "boat",
+  "tonal",
+  "pinniped"
+)
 
-g <- false_colour_plot(c("ENT", "BGN", "OSC")) %>% add_variable_to_FCP(var = "pinniped", indices = c("ENT", "BGN", "OSC"))
-ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-OSC-", site_file_name, "-pinniped.pdf"), width = 12, height = 3)
-
-g <- false_colour_plot(c("ENT", "BGN", "OSC")) %>% add_variable_to_FCP(var = "gull", indices = c("ENT", "BGN", "OSC"))
-ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-OSC-", site_file_name, "-gull.pdf"), width = 12, height = 3)
-
-# 
-# g <- false_colour_plot(c("BGN", "RHZ", "ENT")) %>% add_herring_to_FCP()
-# ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-RHZ-", site_file_name, ".pdf"), width = 12, height = 3)
-# 
-# g <- false_colour_plot(c("BGN", "CVR", "ENT")) %>% add_herring_to_FCP()
-# ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-CVR-", site_file_name, ".pdf"), width = 12, height = 3)
-# 
-# g <- false_colour_plot(c("ENT", "BGN", "CVR")) %>% add_herring_to_FCP()
-# ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-CVR-", site_file_name, ".pdf"), width = 12, height = 3)
-# 
-# g <- false_colour_plot(c("ENT", "BGN", "RVT")) %>% add_herring_to_FCP()
-# ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-RVT-", site_file_name, ".pdf"), width = 12, height = 3)
-# 
-# 
-# g <- false_colour_plot(c("ENT", "BGN", "ACI")) %>% add_herring_to_FCP()
-# ggsave(paste0("figs/false-colour-spectrogram-BGN-ENT-ACI-", site_file_name, ".pdf"), width = 12, height = 3)
-# 
+for (i in indices){
+  for(j in vars){
+    g <- false_colour_plot(i) %>% add_variable_to_FCP(var = j, indices = i)
+  }
+}
 
