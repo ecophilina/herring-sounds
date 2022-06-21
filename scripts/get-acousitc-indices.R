@@ -21,6 +21,9 @@ base_output_directory <- "wdata\\denman"
 source_directory <- "D:\\Herring2020\\Collishaw\\psdfiles"
 base_output_directory <- "wdata\\collishaw"
 
+# for neck pt
+source_directory <- "D:\\Herring2021\\NeckPt1\\psdfiles"
+base_output_directory <- "wdata\\neckpt"
 
 # Get a list of audio files inside the directory
 files <- list.files(source_directory, pattern = "*.wav", full.names = TRUE)
