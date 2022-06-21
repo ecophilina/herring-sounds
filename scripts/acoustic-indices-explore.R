@@ -24,7 +24,7 @@ glimpse(d)
 d2 <- d %>% pivot_longer(1:23, names_to = "index_type", values_to = "score")
 
 # check density differences with herring for summary index values
-d2 %>% ggplot(aes(score,
+d2 %>% filter(samp.tot.sec == 60) %>% ggplot(aes(score,
                    fill = as.factor(herring.hs),
                    colour = as.factor(herring.hs)
 )) +
@@ -35,6 +35,9 @@ d2 %>% ggplot(aes(score,
   theme_sleek()
 
 ggsave(paste0("figs/density-summary-index-values-all-sites.pdf"), width = 12, height = 8)
+
+
+
 
 
 # # # Plot correlation matrix - too slow at frequency level, worth exploring here?
@@ -88,6 +91,27 @@ dat <- inner_join(ld, d) %>% select(-trap_id, -program)
 unique(dat$freq_bin_num)
 dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
 unique(dat$kHz)
+
+
+# check density differences with herring for summary index values
+
+d2 %>% filter(samp.tot.sec == 60) %>% 
+  filter(site == dat$site[1]) %>%
+ggplot(aes(score,
+           fill = as.factor(herring.hs),
+           colour = as.factor(herring.hs)
+)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~index_type, scales = "free") +
+  scale_fill_viridis_d() +
+  scale_colour_viridis_d() +
+  theme_sleek()
+
+ggsave(paste0("figs/density-summary-index-values-", site_file_name, ".pdf"), width = 12, height = 8)
+
+
+
+
 
 # check density differences with herring at the frequency level
 # against 1min annotations
@@ -204,7 +228,7 @@ false_colour_plot <- function(indices,
     geom_raster() +
     scale_colour_identity() +
     scale_fill_identity() +
-    scale_x_datetime(breaks = scales::pretty_breaks(n = 6)) +
+    scale_x_datetime(breaks = scales::pretty_breaks(n = 12)) +
     coord_cartesian(expand = FALSE) +
     theme_sleek() +
     theme(
@@ -406,8 +430,10 @@ for (i in list_indices){
 # what about trying the less dominant variables?
 
 list_indices <- list(
-  c("BGN", "RVT", "ACI"), # collishaw inspired choices
-  c("BGN", "CVR", "RNG")  # denman inspired choices
+  # c("BGN", "RVT", "ACI"), # collishaw inspired choices
+  # c("BGN", "CVR", "RNG"),  # denman inspired choices
+  c("BGN", "CVR", "ACI"),  # denman inspired choices
+  c("BGN", "RNG", "ACI")  # denman inspired choices
 )
 for (i in list_indices){
   indices <- i
@@ -425,9 +451,11 @@ for (i in list_indices){
   g <- false_colour_plot(indices) %>% add_variable_to_FCP(var = "waves", indices = i)
 }
 
-indices <- list(
-  # c("ENT", "BGN", "ACI"),
-  c("ENT", "BGN", "OSC")
+list_indices <- list(
+  c("ENT", "BGN", "ACI"),
+  c("ENT", "BGN", "OSC"),
+  c("BGN", "CVR", "ACI"),  # denman inspired choices
+  c("BGN", "RNG", "ACI")
 )
 
 vars <- list(
