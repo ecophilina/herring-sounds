@@ -390,36 +390,39 @@ corPlot(d1, cex = 1.2)
 # RVT, ACI and OSC all pretty correlated with waves  
 
 # using vars with the strongest relationships with herring
-indices <- list(
+list_indices <- list(
 c("ENT", "BGN", "RVT"),
 c("ENT", "BGN", "RPS"),
 c("ENT", "BGN", "OSC"),
 c("ENT", "BGN", "ACI")
 )
 
-for (i in indices){
-  g <- false_colour_plot(i) %>% add_herring_to_FCP()
+for (i in list_indices){
+  indices <- i
+  g <- false_colour_plot(indices) %>% add_herring_to_FCP()
 }
 
 
 # what about trying the less dominant variables?
 
-indices <- list(
+list_indices <- list(
   c("BGN", "RVT", "ACI"), # collishaw inspired choices
   c("BGN", "CVR", "RNG")  # denman inspired choices
 )
-for (i in indices){
-g <- false_colour_plot(i) %>% add_herring_to_FCP()
+for (i in list_indices){
+  indices <- i
+  g <- false_colour_plot(indices) %>% add_herring_to_FCP()
 }
 
 
 # explore some of the other annotation categories
-indices <- list(
+list_indices <- list(
   c("ENT", "BGN", "ACI"),
   c("ENT", "BGN", "OSC")
 )
-for (i in indices){
-  g <- false_colour_plot(i) %>% add_variable_to_FCP(var = "waves", indices = i)
+for (i in list_indices){
+  indices <- i
+  g <- false_colour_plot(indices) %>% add_variable_to_FCP(var = "waves", indices = i)
 }
 
 indices <- list(
@@ -434,9 +437,11 @@ vars <- list(
   "pinniped"
 )
 
-for (i in indices){
-  for(j in vars){
-    g <- false_colour_plot(i) %>% add_variable_to_FCP(var = j, indices = i)
+
+for(j in vars){
+    for (i in list_indices){
+      indices <- i
+      g <- false_colour_plot(indices) %>% add_variable_to_FCP(var = j, indices = i)
   }
 }
 
