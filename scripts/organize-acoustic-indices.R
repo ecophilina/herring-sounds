@@ -3,18 +3,36 @@ library(tidyverse)
 library(purrr)
 library(lubridate)
 
-# set these for a specific machine
+# set these for a specific machine and dataset
+
+# raw wav files
 # where did we put the towsey outputs?
 towsey_directory <- "wdata/"
 # where to put the compiled dataframe?
 output_parent_directory <- "data/"
 
+# wav files subjected to Raven's broadband denoise adaptive filter
+# where did we put the towsey outputs?
+towsey_directory <- "wdata/bbdenoise/"
+# where to put the compiled dataframe?
+output_parent_directory <- "data/bbdenoise/"
+
+
+# wav files subjected to Raven's narrowband denoise adaptive filter
+# where did we put the towsey outputs?
+towsey_directory <- "wdata/nbdenoise/"
+# where to put the compiled dataframe?
+output_parent_directory <- "data/nbdenoise/"
+
+
+dir.create(file.path(output_parent_directory))
+
 # requires get-acoustic-indices.R to have been run for all sites in this list
 list_sites <- tribble(
   ~site_description, ~site_file_name,
-  "Neck Point (2021)", "neckpt",
-  "Denman (2020)", "denman",
-  "Collishaw (2020)", "collishaw"
+  # "Neck Point (2021)", "neckpt",
+  "Denman (2020)", "denman"
+  # "Collishaw (2020)", "collishaw"
 )
 list_sites$towsey_directory <- towsey_directory
 
@@ -39,7 +57,7 @@ combine_towsey_summary_tabs <- function(file_directory, summary_tables) {
                       full.names = TRUE, recursive = T, include.dirs = T
   )
   all_data <- map_df(files, ~ read.csv(.x) %>% mutate(file = basename(.x)))
-  
+  # browser()
   d <- all_data %>% separate(file,
                              # starting from right and using negatives to allow stid lengths to differ
                              into = c("trap_id", "yr", "mnth", "day", "hr", "min", "sec", "ext"),
@@ -250,4 +268,4 @@ combine_towsey_data_for_all <- function(site_description, site_file_name, towsey
 }
 
 purrr::pmap_dfr(list_sites, combine_towsey_data_for_all)
-
+# because this saves each internally # A tibble: 0 × 0 is expected

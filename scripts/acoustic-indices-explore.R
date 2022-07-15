@@ -10,13 +10,21 @@ library(ggsidekick)
 
 # set these for a specific machine
 # where to find the compiled dataframes?
-output_parent_directory <- "data/"
+# output_parent_directory <- "data/"
+# figure_directory <- "figs/"
 
+output_parent_directory <- "data/bbdenoise/"
+figure_directory <- "figs/bbdenoise/"
+
+# output_parent_directory <- "data/nbdenoise/"
+# figure_directory <- "figs/nbdenoise/"
 
 # choose which data set/sample to compile
 site_file_name <- "denman"
 # site_file_name <- "collishaw"
 # site_file_name <- "neckpt"
+
+dir.create(file.path(figure_directory))
 
 d <- readRDS(paste0(output_parent_directory, "towsey-summary-scores.rds")) 
 
@@ -34,9 +42,7 @@ d2 %>% filter(samp.tot.sec == 60) %>% ggplot(aes(score,
   scale_colour_viridis_d() +
   theme_sleek()
 
-ggsave(paste0("figs/density-summary-index-values-all-sites.pdf"), width = 12, height = 8)
-
-
+ggsave(paste0(figure_directory, "density-summary-index-values-all-sites.pdf"), width = 12, height = 8)
 
 
 
@@ -107,7 +113,7 @@ ggplot(aes(score,
   scale_colour_viridis_d() +
   theme_sleek()
 
-ggsave(paste0("figs/density-summary-index-values-", site_file_name, ".pdf"), width = 12, height = 8)
+ggsave(paste0(figure_directory, "density-summary-index-values-", site_file_name, ".pdf"), width = 12, height = 8)
 
 
 
@@ -128,7 +134,7 @@ dat %>% filter(samp.tot.sec == 60) %>%
   scale_colour_viridis_d() +
   theme_sleek()
 
-ggsave(paste0("figs/density-freq-level-1min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
+ggsave(paste0(figure_directory, "density-freq-level-1min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
 
 # against 15 min annotations
 dat %>% filter(samp.tot.sec == 900) %>% 
@@ -144,7 +150,7 @@ dat %>% filter(samp.tot.sec == 900) %>%
   scale_colour_viridis_d() +
   theme_sleek()
 
-ggsave(paste0("figs/density-freq-level-15min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
+ggsave(paste0(figure_directory, "density-freq-level-15min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
 
 plot_single_index <- function(data,
                               index) {
@@ -293,7 +299,7 @@ add_herring_to_FCP <- function(FCP,
   }
   # g <- g + ggtitle(paste0(.dat1$site[1]), 
   #   subtitle = paste0("bars at top indicate samples with herring calls (pale blue = 1 min resolution; grey = 15 min resolution; white = herring sounds dominate > 10% of time)\nred = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]))
-  ggsave(paste0("figs/false-colour-spectrogram-", paste(indices, collapse = "-"), "-", site_file_name, ".pdf"), 
+  ggsave(paste0(figure_directory, "false-colour-spectrogram-", paste(indices, collapse = "-"), "-", site_file_name, ".pdf"), 
          width = 12, height = 3)
 }
 
@@ -358,7 +364,7 @@ add_variable_to_FCP <- function(FCP,
                       " dominate > 10% of time)\nred = ", indices[1], 
                       ", green = ", indices[2], ", blue = ", indices[3]))
   
-  ggsave(paste0("figs/false-colour-spectrogram-", 
+  ggsave(paste0(figure_directory, "false-colour-spectrogram-", 
                 paste(indices, collapse = "-"), "-", 
                 site_file_name, "-", var, ".pdf"), 
          width = 12, height = 3)
