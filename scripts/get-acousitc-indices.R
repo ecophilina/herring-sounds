@@ -12,15 +12,15 @@
 
 # for denman
 source_directory <- "D:\\Herring2020\\Denman\\psdfiles\\denoise_broadband"
-base_output_directory <- "wdata\\denman_bbdenoise"
+base_output_directory <- "wdata\\bbdenoise\\denman"
 
 # for denman narrowband denoise 
 source_directory <- "D:\\Herring2020\\Denman\\psdfiles\\denoise_narrowband"
-base_output_directory <- "wdata\\denman_nbdenoise"
+base_output_directory <- "wdata\\nbdenoise\\denman"
 
 # for collishaw
 source_directory <- "D:\\Herring2020\\Collishaw\\psdfiles\\denoise_broadband_psdfiles"
-base_output_directory <- "wdata\\collishaw_bbdenoise"
+base_output_directory <- "wdata\\bbdenoise\\collishaw"
 
 # for collishaw narrowband denoise 
 source_directory <- "D:\\Herring2020\\Collishaw\\psdfiles\\denoise_narrowband"
@@ -28,7 +28,7 @@ base_output_directory <- "wdata\\collishaw_nbdenoise"
 
 # for neck pt
 source_directory <- "D:\\Herring2021\\NeckPt1\\psdfiles\\denoise_broadband"
-base_output_directory <- "wdata\\neckpt_bbdenoise"
+base_output_directory <- "wdata\\bbdenoise\\neckpt"
 
 # for neck pt narrowband denoise 
 source_directory <- "D:\\Herring2021\\NeckPt1\\psdfiles\\denoise_narrowband"

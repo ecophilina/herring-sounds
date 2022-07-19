@@ -10,13 +10,21 @@ library(ggsidekick)
 
 # set these for a specific machine
 # where to find the compiled dataframes?
-output_parent_directory <- "data/"
+# output_parent_directory <- "data/"
+# figure_directory <- "figs/"
 
+output_parent_directory <- "data/bbdenoise/"
+figure_directory <- "figs/bbdenoise/"
+
+# output_parent_directory <- "data/nbdenoise/"
+# figure_directory <- "figs/nbdenoise/"
 
 # choose which data set/sample to compile
 site_file_name <- "denman"
 # site_file_name <- "collishaw"
 # site_file_name <- "neckpt"
+
+dir.create(file.path(figure_directory))
 
 d <- readRDS(paste0(output_parent_directory, "towsey-summary-scores.rds")) 
 
@@ -24,7 +32,7 @@ glimpse(d)
 d2 <- d %>% pivot_longer(1:23, names_to = "index_type", values_to = "score")
 
 # check density differences with herring for summary index values
-d2 %>% ggplot(aes(score,
+d2 %>% filter(samp.tot.sec == 60) %>% ggplot(aes(score,
                    fill = as.factor(herring.hs),
                    colour = as.factor(herring.hs)
 )) +
@@ -34,7 +42,8 @@ d2 %>% ggplot(aes(score,
   scale_colour_viridis_d() +
   theme_sleek()
 
-ggsave(paste0("figs/density-summary-index-values-all-sites.pdf"), width = 12, height = 8)
+ggsave(paste0(figure_directory, "density-summary-index-values-all-sites.pdf"), width = 12, height = 8)
+
 
 
 # # # Plot correlation matrix - too slow at frequency level, worth exploring here?
@@ -89,6 +98,27 @@ unique(dat$freq_bin_num)
 dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
 unique(dat$kHz)
 
+
+# check density differences with herring for summary index values
+
+d2 %>% filter(samp.tot.sec == 60) %>% 
+  filter(site == dat$site[1]) %>%
+ggplot(aes(score,
+           fill = as.factor(herring.hs),
+           colour = as.factor(herring.hs)
+)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~index_type, scales = "free") +
+  scale_fill_viridis_d() +
+  scale_colour_viridis_d() +
+  theme_sleek()
+
+ggsave(paste0(figure_directory, "density-summary-index-values-", site_file_name, ".pdf"), width = 12, height = 8)
+
+
+
+
+
 # check density differences with herring at the frequency level
 # against 1min annotations
 dat %>% filter(samp.tot.sec == 60) %>% 
@@ -104,7 +134,7 @@ dat %>% filter(samp.tot.sec == 60) %>%
   scale_colour_viridis_d() +
   theme_sleek()
 
-ggsave(paste0("figs/density-freq-level-1min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
+ggsave(paste0(figure_directory, "density-freq-level-1min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
 
 # against 15 min annotations
 dat %>% filter(samp.tot.sec == 900) %>% 
@@ -120,7 +150,7 @@ dat %>% filter(samp.tot.sec == 900) %>%
   scale_colour_viridis_d() +
   theme_sleek()
 
-ggsave(paste0("figs/density-freq-level-15min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
+ggsave(paste0(figure_directory, "density-freq-level-15min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
 
 plot_single_index <- function(data,
                               index) {
@@ -204,7 +234,7 @@ false_colour_plot <- function(indices,
     geom_raster() +
     scale_colour_identity() +
     scale_fill_identity() +
-    scale_x_datetime(breaks = scales::pretty_breaks(n = 6)) +
+    scale_x_datetime(breaks = scales::pretty_breaks(n = 12)) +
     coord_cartesian(expand = FALSE) +
     theme_sleek() +
     theme(
@@ -269,7 +299,7 @@ add_herring_to_FCP <- function(FCP,
   }
   # g <- g + ggtitle(paste0(.dat1$site[1]), 
   #   subtitle = paste0("bars at top indicate samples with herring calls (pale blue = 1 min resolution; grey = 15 min resolution; white = herring sounds dominate > 10% of time)\nred = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]))
-  ggsave(paste0("figs/false-colour-spectrogram-", paste(indices, collapse = "-"), "-", site_file_name, ".pdf"), 
+  ggsave(paste0(figure_directory, "false-colour-spectrogram-", paste(indices, collapse = "-"), "-", site_file_name, ".pdf"), 
          width = 12, height = 3)
 }
 
@@ -334,7 +364,7 @@ add_variable_to_FCP <- function(FCP,
                       " dominate > 10% of time)\nred = ", indices[1], 
                       ", green = ", indices[2], ", blue = ", indices[3]))
   
-  ggsave(paste0("figs/false-colour-spectrogram-", 
+  ggsave(paste0(figure_directory, "false-colour-spectrogram-", 
                 paste(indices, collapse = "-"), "-", 
                 site_file_name, "-", var, ".pdf"), 
          width = 12, height = 3)
@@ -406,8 +436,10 @@ for (i in list_indices){
 # what about trying the less dominant variables?
 
 list_indices <- list(
-  c("BGN", "RVT", "ACI"), # collishaw inspired choices
-  c("BGN", "CVR", "RNG")  # denman inspired choices
+  # c("BGN", "RVT", "ACI"), # collishaw inspired choices
+  # c("BGN", "CVR", "RNG"),  # denman inspired choices
+  c("BGN", "CVR", "ACI"),  # denman inspired choices
+  c("BGN", "RNG", "ACI")  # denman inspired choices
 )
 for (i in list_indices){
   indices <- i
@@ -425,9 +457,11 @@ for (i in list_indices){
   g <- false_colour_plot(indices) %>% add_variable_to_FCP(var = "waves", indices = i)
 }
 
-indices <- list(
-  # c("ENT", "BGN", "ACI"),
-  c("ENT", "BGN", "OSC")
+list_indices <- list(
+  c("ENT", "BGN", "ACI"),
+  c("ENT", "BGN", "OSC"),
+  c("BGN", "CVR", "ACI"),  # denman inspired choices
+  c("BGN", "RNG", "ACI")
 )
 
 vars <- list(
