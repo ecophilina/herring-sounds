@@ -22,9 +22,17 @@ base_output_directory <- "wdata\\denman_nbdenoise"
 source_directory <- "D:\\Herring2020\\Collishaw\\psdfiles\\denoise_broadband_psdfiles"
 base_output_directory <- "wdata\\collishaw_bbdenoise"
 
+# for collishaw narrowband denoise 
+source_directory <- "D:\\Herring2020\\Collishaw\\psdfiles\\denoise_narrowband"
+base_output_directory <- "wdata\\collishaw_nbdenoise"
+
 # for neck pt
 source_directory <- "D:\\Herring2021\\NeckPt1\\psdfiles\\denoise_broadband"
 base_output_directory <- "wdata\\neckpt_bbdenoise"
+
+# for neck pt narrowband denoise 
+source_directory <- "D:\\Herring2021\\NeckPt1\\psdfiles\\denoise_narrowband"
+base_output_directory <- "wdata\\neckpt_nbdenoise"
 
 # Get a list of audio files inside the directory
 files <- list.files(source_directory, pattern = "*.wav", full.names = TRUE)
