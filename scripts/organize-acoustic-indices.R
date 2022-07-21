@@ -30,9 +30,9 @@ dir.create(file.path(output_parent_directory))
 # requires get-acoustic-indices.R to have been run for all sites in this list
 list_sites <- tribble(
   ~site_description, ~site_file_name,
-  # "Neck Point (2021)", "neckpt",
-  "Denman (2020)", "denman"
-  # "Collishaw (2020)", "collishaw"
+  "Neck Point (2021)", "neckpt",
+  "Denman (2020)", "denman",
+  "Collishaw (2020)", "collishaw"
 )
 list_sites$towsey_directory <- towsey_directory
 
