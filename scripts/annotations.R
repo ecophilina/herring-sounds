@@ -141,7 +141,7 @@ dat0 <- dat %>% filter(site != "Neck Point (2020)") %>%
          SPL2to6kHz_st = scale(SPL2to6kHz), SPL2to6kHz_mean = attr(scale(SPL2to6kHz),"scaled:center"),
          SPL2to3.5kHz_st = scale(SPL2to3.5kHz), SPL2to3.5kHz_mean = attr(scale(SPL2to3.5kHz),"scaled:center"),
          SPL6to24kHz_st = scale(SPL6to24kHz), SPL6to24kHz_mean = attr(scale(SPL6to24kHz),"scaled:center")) %>% 
-  #filter(site != "Denman (2020)") %>% 
+  # filter(site != "Denman (2020)") %>% 
   # filter(herring.hs %in% c(0,2,3)) %>%
   filter(SPL < 120) %>%
   filter(boat < 3) %>%
@@ -355,7 +355,7 @@ d2<-read.csv("raw-annotations/Denman_15min_200308.csv", stringsAsFactors = F
 ) %>% mutate(site = "Denman (2020)") 
 c2<-read.csv("raw-annotations/Collishaw_15min_200308.csv", stringsAsFactors = F
 ) %>% mutate(site = "Collishaw (2020)") 
-p2<-read.csv("raw-annotations/NeckPt_15min_210313.csv", stringsAsFactors = F
+p2<-read.csv("raw-annotations/NeckPt_15min_210313_PE.csv", stringsAsFactors = F
 ) %>% mutate(site = "Neck Point (2021)") 
 
 dat2 <- bind_rows(d2, c2, p2) %>%
