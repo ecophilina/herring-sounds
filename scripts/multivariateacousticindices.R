@@ -88,11 +88,11 @@ ind.sc.use<-bind_rows(ind.sc1,ind.sc2,ind.sc3)%>%
 #   geom_segment(data=ind.sc.use,aes(x=0,y=0,xend=RDA1,yend=RDA2,color=index),linetype="dashed")+
 #   scale_color_viridis_d()
 
-# library(plotly)
-# 
-# fig <- plot_ly(dm, x = ~Snr, y = ~LowFreqCover, z = ~ClusterCount, color = ~as.factor(herring.hs),alpha=.5,colors=c("#0D0887FF", "#B12A90FF" ,"#FCA636FF"))
-# fig <- fig %>% add_markers()
-# fig
+library(plotly)
+
+fig <- plot_ly(dm, x = ~Snr, y = ~LowFreqCover, z = ~ClusterCount, color = ~as.factor(herring.hs),alpha=.5,colors=c("#0D0887FF", "#B12A90FF" ,"#FCA636FF"))
+fig <- fig %>% add_markers()
+fig
 # 
 # p1<-ggplot(dm)+
 #   geom_point(aes(x=Snr,y=LowFreqCover,color=as.factor(herring.hs)),alpha=.3)+
@@ -107,3 +107,172 @@ ind.sc.use<-bind_rows(ind.sc1,ind.sc2,ind.sc3)%>%
 
 # write out dataset for false color code  
 write_rds(em2,"data/multivariate_output_for_falsecolor.rds")
+
+# try making a tile figure out of multivariate
+em3<-data.frame(datetime=dm$datetime,em2,Snr=dm$Snr,
+                ClusterCount=dm$ClusterCount,
+                LowFreqCover=dm$LowFreqCover)%>%
+  mutate(r=scales::rescale(RDA1,to=c(0,1)),
+         g=scales::rescale(RDA2,to=c(0,1)),
+         b=scales::rescale(RDA3,to=c(0,1)),
+         r2=scales::rescale(Snr,to=c(0,1)),
+         g2=scales::rescale(ClusterCount,to=c(0,1)),
+         b2=scales::rescale(LowFreqCover,to=c(0,1)),
+         dom=day(datetime),
+         hr=hour(datetime),
+         hrm=hour(datetime)+(minute(datetime)/60),
+         hrm2=hms(paste(hour(datetime),minute(datetime),"00")),
+         col=rgb(r, g, b, maxColorValue = 1),
+         col2=rgb(r2,g2,b2,maxColorValue = 1))
+
+tid<-data.frame(hrm=unique(em3$hrm))%>%
+  arrange(hrm)%>%
+  mutate(tid=row_number())
+
+em3<-left_join(em3,tid)%>%
+  group_by(hr)%>%
+  mutate(hid=ifelse(hrm==min(hrm),1,0))
+
+yalab<-em3%>%
+  select(tid,hr,hid)%>%
+  filter(hid==1)%>%
+  distinct()%>%
+  filter(hr %in% c(0,5,10,15,20))
+
+theme_set(theme_bw()+
+            theme(panel.grid = element_blank(),
+                  panel.background = element_rect(fill="grey"),
+                  plot.title = element_text(hjust = 0.5),
+                  plot.subtitle = element_text(hjust=0.5)))
+
+(df<-ggplot(data=em3%>%
+         filter(site=="Denman (2020)"))+
+  geom_tile(aes(x=dom,y=tid,fill=col2))+
+  scale_fill_identity()+
+  scale_y_continuous(name="Hour",breaks=yalab$tid,labels=yalab$hr,limits=c(0,768),expand = c(0,0))+
+  xlab("Date (March)")+
+  ggtitle("Denman",subtitle="False Color (SNR, Cluster Count, Low Frequency Cover)"))
+
+(dh<-ggplot(data=em3%>%
+                filter(site=="Denman (2020)"))+
+    geom_tile(aes(x=dom,y=tid,fill=as.factor(herring.hs)))+
+    scale_y_continuous(name="Hour",breaks=yalab$tid,labels=yalab$hr,limits=c(0,768),expand = c(0,0))+
+    xlab("Date (March)")+
+    ggtitle("",subtitle="Herring score"))
+
+(db<-ggplot(data=em3%>%
+              filter(site=="Denman (2020)"))+
+    geom_tile(aes(x=dom,y=tid,fill=as.factor(boat)))+
+    scale_y_continuous(name="Hour",breaks=yalab$tid,labels=yalab$hr,limits=c(0,768),expand = c(0,0))+
+    xlab("Date (March)")+
+    ggtitle("",subtitle="Herring score")+
+    theme(legend.position = "left"))
+
+library(patchwork)
+
+db+df+dh
+
+
+
+(nf<-ggplot(data=em3%>%
+              filter(site=="Neck Point (2021)"))+
+    geom_tile(aes(x=dom,y=tid,fill=col2))+
+    scale_fill_identity()+
+    scale_y_continuous(name="Hour",breaks=yalab$tid,labels=yalab$hr,limits=c(0,768),expand = c(0,0))+
+    xlab("Date (March)")+
+    ggtitle("Neck Point",subtitle="False Color (SNR, Cluster Count, Low Frequency Cover)"))
+
+(nh<-ggplot(data=em3%>%
+              filter(site=="Neck Point (2021)"))+
+    geom_tile(aes(x=dom,y=tid,fill=as.factor(herring.hs)))+
+    scale_y_continuous(name="Hour",breaks=yalab$tid,labels=yalab$hr,limits=c(0,768),expand = c(0,0))+
+    xlab("Date (March)")+
+    ggtitle("",subtitle="Herring score"))
+
+(nb<-ggplot(data=em3%>%
+              filter(site=="Neck Point (2021)"))+
+    geom_tile(aes(x=dom,y=tid,fill=as.factor(boat)))+
+    scale_y_continuous(name="Hour",breaks=yalab$tid,labels=yalab$hr,limits=c(0,768),expand = c(0,0))+
+    xlab("Date (March)")+
+    ggtitle("",subtitle="Herring score")+
+    theme(legend.position = "left"))
+
+nb+nf+nh
+
+
+ggplot(data=em3,aes(x=herring.hs,y=boat,color=col2))+
+  geom_jitter()+
+  scale_color_identity()+
+  facet_grid(~site)
+
+# use 60 second data
+
+
+# try making a tile figure out of multivariate
+em4<-data.frame(datetime=d2$datetime,site=d2$site,
+                herring=d2$herring.hs,
+                boat=d2$boat,
+                waves=d2$waves,
+                samp.tot.sec=d2$samp.tot.sec,
+                index=d2$index_type,
+                score=d2$score)%>%
+  #filter(samp.tot.sec!=60)%>%
+  filter(index %in% c("Snr","ClusterCount","LowFreqCover"))%>%
+  pivot_wider(names_from = index,values_from=score)%>%
+  mutate(r2=scales::rescale(Snr,to=c(0,1)),
+         g2=scales::rescale(ClusterCount,to=c(0,1)),
+         b2=scales::rescale(LowFreqCover,to=c(0,1)),
+         dom=day(datetime),
+         hr=hour(datetime),
+         hrm=hour(datetime)+(minute(datetime)/60),
+         hrm2=hms(paste(hour(datetime),minute(datetime),"00")),
+         #col=rgb(r, g, b, maxColorValue = 1),
+         col2=rgb(r2,g2,b2,maxColorValue = 1))  
+
+
+#ggplot(data=em4,aes(x=Snr,y=ClusterCount,color=LowFreqCover,shape=site))+
+#ggplot(data=em3,aes(x=RDA1,y=RDA2,color=RDA3,shape=site))+
+#ggplot(data=em3,aes(x=RDA2,y=RDA3,color=RDA1,shape=site))+
+ggplot(data=em3,aes(x=RDA1,y=RDA3,color=RDA2,shape=site))+
+  geom_jitter(alpha=.4)+
+  #scale_color_identity()+
+  scale_color_viridis_c(option="A",end=.8)+
+  facet_grid(rows=vars(herring.hs),cols=vars(boat))
+
+
+# one more way of vizualizing it
+herring.col<-data.frame(herring.hs=unique(em3$herring.hs))%>%
+  arrange(herring.hs)%>%
+  mutate(herring.index=viridis::magma(4,end=.8))
+
+boat.col<-data.frame(boat=unique(em3$boat))%>%
+  arrange(boat)%>%
+  mutate(boat.index=viridis::magma(3,end=.8))
+
+waves.col<-data.frame(waves=unique(em3$waves))%>%
+  arrange(waves)%>%
+  mutate(waves.index=viridis::magma(4,end=.8))
+
+em3b<-left_join(em3,herring.col)%>%
+  left_join(boat.col)%>%
+  left_join(waves.col)%>%
+  rename(FalseColor.index=col2,FalseColor.rda=col)%>%
+  pivot_longer(c(FalseColor.index,FalseColor.rda,herring.index,boat.index,waves.index),
+               names_to="Index",
+               values_to="colors")%>%
+  select(site,datetime,Index,colors)%>%
+  distinct()
+
+em3b$Index<-factor(em3b$Index,levels=c("FalseColor.index","FalseColor.rda","herring.index",
+                                       "boat.index","waves.index"),
+                   labels = c("False Color\nIndex",
+                              "False Color\nRDA","Herring Score",
+                              "Boat Score","Waves Score"))
+
+ggplot(em3b,aes(x=datetime,y=1,fill=colors))+
+  geom_tile()+
+  scale_fill_identity()+
+  facet_grid(Index~site,scales="free")+
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y=element_blank())
