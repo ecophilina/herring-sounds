@@ -554,210 +554,282 @@ ggplot(data = filter(dat, herring.hs > 0), aes(day, time, fill = herring.hs)) +
 
 # heat maps for all data pooled to 15 min
 
-alldat %>% filter(site != "Neck Point (2020)") %>%
-ggplot(aes(d, time, fill = herring.hs, alpha = -(SPL))) + geom_tile(width=1, height=0.5) + 
-  geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.5)+
-  scale_fill_viridis_c("Herring\nScore") + 
+library(rphylopic) #http://phylopic.org/image/browse/
+gullpng <- image_data("6f87dbf2-289a-4c57-b26c-9384993c37d4", size = 256)[[1]]
+
+# sealion <- image_data("04302cd3-cbba-42e9-8c9b-f54938840b05", size = 256)[[1]]
+sealion <- image_data("6b7f24dc-6525-4263-b480-6f93f9a7a31d", size = 256)[[1]]
+
+
+annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, data) 
+{
+  # browser()
+  layer(data = data, stat = StatIdentity, position = PositionIdentity, 
+        geom = ggplot2:::GeomCustomAnn,
+        inherit.aes = TRUE, params = list(grob = grob, 
+                                          xmin = xmin, xmax = xmax, 
+                                          ymin = ymin, ymax = ymax))
+}
+
+add_phylopic2 <- function (img, alpha = 0.2, x = NULL, y = NULL, ysize = NULL, 
+          color = NULL, facets = NULL) 
+{
+  mat <- rphylopic:::recolor_phylopic(img, alpha, color)
+  if (!is.null(x) && !is.null(y) && !is.null(ysize)) {
+    aspratio <- nrow(mat)/ncol(mat)
+    ymin <- y - ysize/2
+    ymax <- y + ysize/2
+    xmin <- x - ysize/aspratio/2
+    xmax <- x + ysize/aspratio/2
+  }
+  else {
+    ymin <- -Inf
+    ymax <- Inf
+    xmin <- -Inf
+    xmax <- Inf
+  }
+  imgGrob <- grid::rasterGrob(mat)
+  
+  return(annotation_custom2(data = data.frame(site=facets, day = x, time = y),
+                           xmin = xmin, ymin = ymin, xmax = xmax, 
+                           ymax = ymax, imgGrob))
+}
+
+
+
+
+g <- alldat %>% filter(site != "Neck Point (2020)") %>% mutate(day = d) %>%
+ggplot(aes(day, time)) + 
+  geom_tile(aes(fill = herring.hs, alpha = -(SPL)),
+  width=1, height=0.5) +
+  # geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.5)+
+  # geom_point(data = d, aes(d, time), inherit.aes = F) +
+  # geom_point(data = filter(alldat, (pinniped != 0 | gull != 0 ) & site != "Neck Point (2020)"), aes(size = (pinniped + gull)), colour = "black", alpha=1, shape = 8)+
+  scale_fill_viridis_c("Herring\nScore", option = "plasma") + 
   scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
+  scale_size_continuous(guide="none") +
   xlab("Date (March)") + 
   ylab("Pacific Standard Time") +
   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+  facet_wrap(~site, ncol = 3, scales = "free_x") + theme_sleek()
+
+d <- filter(alldat, gull != 0 & site != "Neck Point (2020)") %>% mutate(day = d) 
+for (i in 1:nrow(d)) {
+  g <- g + add_phylopic2(gullpng, 1,
+             x = d$day[i]+0.25, d$time[i], ysize = d$gull[i]/1.5
+             # , color = "white"
+             , facets = d$site[i]
+  )
+}
+
+# g
+
+d <- filter(alldat, pinniped != 0 & site != "Neck Point (2020)") %>% mutate(day = d) 
+for (i in 1:nrow(d)) {
+  g <- g + add_phylopic2(sealion, 1,
+                         x = d$day[i]-0.25, d$time[i], ysize = d$pinniped[i]/3
+                         # , color = "white"
+                         , facets = d$site[i]
+  )
+}
+g
 
 # ggsave("herring-time-by-day-max.png", height = 5, width = 3)
 ggsave("herring-time-by-day-mean-spl-alpha.png", height = 3, width = 6)
-
-
-alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(d, time, fill = herring.hs, alpha = -(SPL2to6kHz))) + geom_tile(width=1, height=0.5) + 
-  geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.5)+
-  scale_fill_viridis_c("Herring\nScore") + 
-  scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
-  xlab("Date (March)") + 
-  ylab("Pacific Standard Time") +
-  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
-
-# ggsave("herring-time-by-day-max.png", height = 5, width = 3)
-ggsave("herring-time-by-day-mean-spl2to6-alpha.png", height = 3, width = 6)
-
-
-alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(d, time, fill = herring.hs, alpha = -(boat))) + geom_tile(width=1, height=0.5) + 
-  geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.5)+
-  scale_fill_viridis_c("Herring\nScore") + 
-  scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
-  xlab("Date (March)") + 
-  ylab("Pacific Standard Time") +
-  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
-
-ggsave("herring-time-by-day-mean-boat-alpha.png", height = 3, width = 6)
+ggsave("herring-time-by-day-mean-spl-alpha-plasma.png", height = 3, width = 6)
 
 
 
-alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(d, time, fill = fish.knock, alpha = -SPL)) + geom_tile(width=1, height=0.5) + 
-  scale_fill_viridis_c("Other\nFish\nScore") + 
-  scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
-  xlab("Date (March)") + 
-  ylab("Pacific Standard Time") +
-  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
-
-ggsave("fishknocks-time-by-day-mean.png", height = 3, width = 6)
-
-alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(d, time, fill = SPL)) + geom_tile(width=1, height=0.5) + 
-  # geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", size = 0.5)+
-  scale_fill_viridis_c("SPL\n > 0.2 kHz") + 
-  xlab("Date") + 
-  ylab("Time of day (24 hr clock)") +
-  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  # guides(size = "none") +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
-
-ggsave("SPL-time-by-day-mean.png", height = 3, width = 6)
-
-
-
-alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(d, time, fill = SPL2to6kHz)) + geom_tile(width=1, height=0.5) + 
-  # geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", size = 0.5)+
-  scale_fill_viridis_c("SPL\n2 to 6 kHz") + 
-  xlab("Date") + 
-  ylab("Time of day (24 hr clock)") +
-  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  # guides(size = "none") +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
-
-ggsave("SPL2to6kHz-time-by-day-mean.png", height = 3, width = 6)
-
-
-alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(d, time, fill = boat)) + geom_tile(width=1, height=0.5) + 
-  geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", size = 0.5)+
-  scale_fill_viridis_c("Boat\nNoise") + 
-  xlab("Date") + 
-  ylab("Time of day (24 hr clock)") +
-  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  # guides(size = "none") +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
-
-ggsave("boat-time-by-day-mean.png", height = 3, width = 6)
-
-
-alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(d, time, fill = (SPL6to24kHz))) + geom_tile(width=1, height=0.5) + 
-  scale_fill_viridis_c("SPL\n6 to 24 kHz") + 
-  xlab("Date") + 
-  ylab("Time of day (24 hr clock)") +
-  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  # guides(size = "none") +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
-
-ggsave("SPL6to24kHz-time-by-day-mean.png", height = 3, width = 6)
-
-
-alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(d, time, fill = (SPL6to24kHz+SPL2to6kHz)/2)) + geom_tile(width=1, height=0.5) + 
-  scale_fill_viridis_c("SPL\n2 to 24 kHz") + 
-  xlab("Date") + 
-  ylab("Time of day (24 hr clock)") +
-  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  # guides(size = "none") +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
-
-ggsave("SPL2to24kHz-time-by-day-mean.png", height = 3, width = 6)
-
-alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(d, time, fill = (SPL0.02to2kHz))) + geom_tile(width=1, height=0.5) + 
-  scale_fill_viridis_c("SPL\n0.2 to 2 kHz") + 
-  xlab("Date") + 
-  ylab("Time of day (24 hr clock)") +
-  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  # guides(size = "none") +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
-
-ggsave("SPL0.2to2kHz-time-by-day-mean.png", height = 3, width = 6)
-
-
-
-alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(d, time, fill = waves)) + geom_tile(width=1, height=0.5) + 
-  scale_fill_viridis_c("Wave\nNoise") + 
-  xlab("Date") + 
-  ylab("Time of day (24 hr clock)") +
-  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  # guides(size = "none") +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
-
-ggsave("waves-time-by-day-mean.png", height = 3, width = 6)
-
-
-
-alldat %>% filter(site != "Neck Point (2020)") %>%
-  ggplot(aes(day, time, fill = herring.hs, alpha = -(boat*1.5 + (waves*0.2)))) + 
-  geom_tile(width=1, height=0.5, colour = NA ) + 
-  scale_fill_viridis_c("Herring\nScore", option = "D", end = 0.95) + 
-  # scale_fill_viridis_c("Herring\nScore", option = "C", end = 0.6) + 
-  # fade based on cummulative score for boat and wave noise
-  scale_alpha_continuous(guide = "none", range = c(0.1, 1)) + 
-  # add dots for deterrent tones
-  geom_point(data = filter(alldat, (pinniped != 0 | gull != 0 ) & site != "Neck Point (2020)"), aes(size = (pinniped + gull)), colour = "black", alpha=1)+
-  # geom_point(data = filter(alldat, site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.25)+
-  # geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "red", alpha=1, size = 0.15)+
-  scale_size_continuous(guide = "none", range = c(0.1, 1)) + 
-  xlab("Date (March)") + 
-  ylab("Pacific Standard Time") +
-  scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-  facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
-
-# ggsave("herring-time-by-day-max.png", height = 5, width = 3)
-# ggsave("herring-time-by-day-mean-C.png", height = 3, width = 6)
-ggsave("herring-time-by-day-mean-D.pdf", height = 3, width = 6)
-
-
-
-
-#### choose example files ####
-
-
-## low boat, high herring
-sample_1_he <- dat %>% filter(herring.hs > 2, boat < 2, waves < 1) 
-
-# denman 5042.200306210002.wav
-# neck   5042.210312230058.wav
-
-
-## high boat, high herring
-# sample_15_he_boat <- alldat %>% filter(herring.hs > 2, boat >= 2, waves < 2) 
-sample_1_he_boat <- dat %>% filter(herring.hs > 2, boat >= 2, waves < 2) 
-
-# denman 5042.200306200002.wav
-# neck   5042.210312060042.wav
-
-
-## low boat, no herring
-sample_15_nothing <- alldat %>% filter(herring.hs == 0, herring.frt == 0, herring.p == 0,
-  # pinniped <1, gull < 1, 
-  boat <= 1.5, waves <= 1.5) 
-
-# denman 5042.200307113002.wav
-# neck   5042.210312113054.wav
-
-
-## high boat, no herring
-sample_15_boat <- alldat %>% filter(herring.hs == 0, herring.frt == 0, herring.p == 0, 
-  waves < 1, rustling < 0.1, splahes < 0.1,
-  boat > 2,  boat <= 3) 
-
-sample_1_boat <- dat %>% filter(herring.hs == 0, herring.frt == 0, herring.p == 0, 
-  invert.snap > 0,
-  waves < 1, rustling < 0.1, splahes < 0.1,
-  boat == 2) 
-
-# denman  5042.200306183002.wav (less intense boat) or 5042.200306093002.wav (more intense boat)
-# neck   	5042.210311200014.wav (less intense boat) or 5042.210311220018.wav (more intense boat)
-
-
+# alldat %>% filter(site != "Neck Point (2020)") %>%
+#   ggplot(aes(d, time, fill = herring.hs, alpha = -(SPL2to6kHz))) + geom_tile(width=1, height=0.5) + 
+#   geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.5)+
+#   scale_fill_viridis_c("Herring\nScore") + 
+#   scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
+#   xlab("Date (March)") + 
+#   ylab("Pacific Standard Time") +
+#   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+#   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+# 
+# # ggsave("herring-time-by-day-max.png", height = 5, width = 3)
+# ggsave("herring-time-by-day-mean-spl2to6-alpha.png", height = 3, width = 6)
+# 
+# 
+# alldat %>% filter(site != "Neck Point (2020)") %>%
+#   ggplot(aes(d, time, fill = herring.hs, alpha = -(boat))) + geom_tile(width=1, height=0.5) + 
+#   geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.5)+
+#   scale_fill_viridis_c("Herring\nScore") + 
+#   scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
+#   xlab("Date (March)") + 
+#   ylab("Pacific Standard Time") +
+#   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+#   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+# 
+# ggsave("herring-time-by-day-mean-boat-alpha.png", height = 3, width = 6)
+# 
+# 
+# 
+# alldat %>% filter(site != "Neck Point (2020)") %>%
+#   ggplot(aes(d, time, fill = fish.knock, alpha = -SPL)) + geom_tile(width=1, height=0.5) + 
+#   scale_fill_viridis_c("Other\nFish\nScore") + 
+#   scale_alpha_continuous(guide = "none", range = c(0.3, 1)) + 
+#   xlab("Date (March)") + 
+#   ylab("Pacific Standard Time") +
+#   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+#   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+# 
+# ggsave("fishknocks-time-by-day-mean.png", height = 3, width = 6)
+# 
+# alldat %>% filter(site != "Neck Point (2020)") %>%
+#   ggplot(aes(d, time, fill = SPL)) + geom_tile(width=1, height=0.5) + 
+#   # geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", size = 0.5)+
+#   scale_fill_viridis_c("SPL\n > 0.2 kHz") + 
+#   xlab("Date") + 
+#   ylab("Time of day (24 hr clock)") +
+#   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+#   # guides(size = "none") +
+#   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+# 
+# ggsave("SPL-time-by-day-mean.png", height = 3, width = 6)
+# 
+# 
+# 
+# alldat %>% filter(site != "Neck Point (2020)") %>%
+#   ggplot(aes(d, time, fill = SPL2to6kHz)) + geom_tile(width=1, height=0.5) + 
+#   # geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", size = 0.5)+
+#   scale_fill_viridis_c("SPL\n2 to 6 kHz") + 
+#   xlab("Date") + 
+#   ylab("Time of day (24 hr clock)") +
+#   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+#   # guides(size = "none") +
+#   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+# 
+# ggsave("SPL2to6kHz-time-by-day-mean.png", height = 3, width = 6)
+# 
+# 
+# alldat %>% filter(site != "Neck Point (2020)") %>%
+#   ggplot(aes(d, time, fill = boat)) + geom_tile(width=1, height=0.5) + 
+#   geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "black", size = 0.5)+
+#   scale_fill_viridis_c("Boat\nNoise") + 
+#   xlab("Date") + 
+#   ylab("Time of day (24 hr clock)") +
+#   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+#   # guides(size = "none") +
+#   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+# 
+# ggsave("boat-time-by-day-mean.png", height = 3, width = 6)
+# 
+# 
+# alldat %>% filter(site != "Neck Point (2020)") %>%
+#   ggplot(aes(d, time, fill = (SPL6to24kHz))) + geom_tile(width=1, height=0.5) + 
+#   scale_fill_viridis_c("SPL\n6 to 24 kHz") + 
+#   xlab("Date") + 
+#   ylab("Time of day (24 hr clock)") +
+#   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+#   # guides(size = "none") +
+#   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+# 
+# ggsave("SPL6to24kHz-time-by-day-mean.png", height = 3, width = 6)
+# 
+# 
+# alldat %>% filter(site != "Neck Point (2020)") %>%
+#   ggplot(aes(d, time, fill = (SPL6to24kHz+SPL2to6kHz)/2)) + geom_tile(width=1, height=0.5) + 
+#   scale_fill_viridis_c("SPL\n2 to 24 kHz") + 
+#   xlab("Date") + 
+#   ylab("Time of day (24 hr clock)") +
+#   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+#   # guides(size = "none") +
+#   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+# 
+# ggsave("SPL2to24kHz-time-by-day-mean.png", height = 3, width = 6)
+# 
+# alldat %>% filter(site != "Neck Point (2020)") %>%
+#   ggplot(aes(d, time, fill = (SPL0.02to2kHz))) + geom_tile(width=1, height=0.5) + 
+#   scale_fill_viridis_c("SPL\n0.2 to 2 kHz") + 
+#   xlab("Date") + 
+#   ylab("Time of day (24 hr clock)") +
+#   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+#   # guides(size = "none") +
+#   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+# 
+# ggsave("SPL0.2to2kHz-time-by-day-mean.png", height = 3, width = 6)
+# 
+# 
+# 
+# alldat %>% filter(site != "Neck Point (2020)") %>%
+#   ggplot(aes(d, time, fill = waves)) + geom_tile(width=1, height=0.5) + 
+#   scale_fill_viridis_c("Wave\nNoise") + 
+#   xlab("Date") + 
+#   ylab("Time of day (24 hr clock)") +
+#   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+#   # guides(size = "none") +
+#   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+# 
+# ggsave("waves-time-by-day-mean.png", height = 3, width = 6)
+# 
+# 
+# 
+# alldat %>% filter(site != "Neck Point (2020)") %>%
+#   ggplot(aes(day, time, fill = herring.hs, alpha = -(boat*1.5 + (waves*0.2)))) + 
+#   geom_tile(width=1, height=0.5, colour = NA ) + 
+#   scale_fill_viridis_c("Herring\nScore", option = "D", end = 0.95) + 
+#   # scale_fill_viridis_c("Herring\nScore", option = "C", end = 0.6) + 
+#   # fade based on cummulative score for boat and wave noise
+#   scale_alpha_continuous(guide = "none", range = c(0.1, 1)) + 
+#   # add dots for deterrent tones
+#   geom_point(data = filter(alldat, (pinniped != 0 | gull != 0 ) & site != "Neck Point (2020)"), aes(size = (pinniped + gull)), colour = "black", alpha=1)+
+#   # geom_point(data = filter(alldat, site != "Neck Point (2020)"), colour = "black", alpha=1, size = 0.25)+
+#   # geom_point(data = filter(alldat, tonal != 0 & site != "Neck Point (2020)"), colour = "red", alpha=1, size = 0.15)+
+#   scale_size_continuous(guide = "none", range = c(0.1, 1)) + 
+#   xlab("Date (March)") + 
+#   ylab("Pacific Standard Time") +
+#   scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
+#   facet_wrap(~site, ncol = 3, scales = "free") + theme_sleek()
+# 
+# # ggsave("herring-time-by-day-max.png", height = 5, width = 3)
+# # ggsave("herring-time-by-day-mean-C.png", height = 3, width = 6)
+# ggsave("herring-time-by-day-mean-D.pdf", height = 3, width = 6)
+# 
+# 
+# 
+# 
+# #### choose example files ####
+# 
+# 
+# ## low boat, high herring
+# sample_1_he <- dat %>% filter(herring.hs > 2, boat < 2, waves < 1) 
+# 
+# # denman 5042.200306210002.wav
+# # neck   5042.210312230058.wav
+# 
+# 
+# ## high boat, high herring
+# # sample_15_he_boat <- alldat %>% filter(herring.hs > 2, boat >= 2, waves < 2) 
+# sample_1_he_boat <- dat %>% filter(herring.hs > 2, boat >= 2, waves < 2) 
+# 
+# # denman 5042.200306200002.wav
+# # neck   5042.210312060042.wav
+# 
+# 
+# ## low boat, no herring
+# sample_15_nothing <- alldat %>% filter(herring.hs == 0, herring.frt == 0, herring.p == 0,
+#   # pinniped <1, gull < 1, 
+#   boat <= 1.5, waves <= 1.5) 
+# 
+# # denman 5042.200307113002.wav
+# # neck   5042.210312113054.wav
+# 
+# 
+# ## high boat, no herring
+# sample_15_boat <- alldat %>% filter(herring.hs == 0, herring.frt == 0, herring.p == 0, 
+#   waves < 1, rustling < 0.1, splahes < 0.1,
+#   boat > 2,  boat <= 3) 
+# 
+# sample_1_boat <- dat %>% filter(herring.hs == 0, herring.frt == 0, herring.p == 0, 
+#   invert.snap > 0,
+#   waves < 1, rustling < 0.1, splahes < 0.1,
+#   boat == 2) 
+# 
+# # denman  5042.200306183002.wav (less intense boat) or 5042.200306093002.wav (more intense boat)
+# # neck   	5042.210311200014.wav (less intense boat) or 5042.210311220018.wav (more intense boat)
+# 
+# 
