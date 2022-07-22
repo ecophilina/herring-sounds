@@ -11,18 +11,18 @@ towsey_directory <- "wdata/"
 # where to put the compiled dataframe?
 output_parent_directory <- "data/"
 
-# wav files subjected to Raven's broadband denoise adaptive filter
-# where did we put the towsey outputs?
-towsey_directory <- "wdata/bbdenoise/"
-# where to put the compiled dataframe?
-output_parent_directory <- "data/bbdenoise/"
-
-
-# wav files subjected to Raven's narrowband denoise adaptive filter
-# where did we put the towsey outputs?
-towsey_directory <- "wdata/nbdenoise/"
-# where to put the compiled dataframe?
-output_parent_directory <- "data/nbdenoise/"
+# # wav files subjected to Raven's broadband denoise adaptive filter
+# # where did we put the towsey outputs?
+# towsey_directory <- "wdata/bbdenoise/"
+# # where to put the compiled dataframe?
+# output_parent_directory <- "data/bbdenoise/"
+# 
+# 
+# # wav files subjected to Raven's narrowband denoise adaptive filter
+# # where did we put the towsey outputs?
+# towsey_directory <- "wdata/nbdenoise/"
+# # where to put the compiled dataframe?
+# output_parent_directory <- "data/nbdenoise/"
 
 
 dir.create(file.path(output_parent_directory))
@@ -67,9 +67,10 @@ combine_towsey_summary_tabs <- function(file_directory, summary_tables) {
     # use to check if working
     # select(Index, trap_id, yr, mnth, d, hr, min, sec, program, index_type, ext)
     mutate(
+      # sec = "00", 
       trap_id = as.numeric(trap_id),
       # this is the date-time when the file started recording
-      file_dt = ymd_hms(paste(yr, mnth, day, hr, min, sec)),
+      file_dt = ymd_hms(paste(yr, mnth, day, hr, min, "00")),
       minintofile = ResultMinute,
       secintofile = ResultStartSeconds,
       # calculate datetime for each interval
@@ -100,7 +101,7 @@ combine_with_annotations <- function(site_description, site_file_name, towsey_di
     summary_tables
   )
   s$site <- site_description
-  
+  # browser()
   if(site_file_name == "denman") {
     d <- read.csv("raw-annotations/Denman_1min_200306.csv", stringsAsFactors = F) %>%
       mutate(site = "Denman (2020)")
@@ -116,14 +117,15 @@ combine_with_annotations <- function(site_description, site_file_name, towsey_di
   }
   
   if(site_file_name == "neckpt") {
-    d <- read.csv("raw-annotations/NeckPt_1min_210311.csv", stringsAsFactors = F) %>%
+    # found errors in file names on March 10, 23:30, 11th 00:00, and 14th 00:00 and 03:00
+    d <- read.csv("raw-annotations/NeckPt_1min_210311_PE.csv", stringsAsFactors = F) %>%
       mutate(
         site = "Neck Point (2021)",
         # only non-zero records are 1? so replaced by NAs
         herring.frt = as.integer(herring.frt)
       ) %>%
       rename(herring.hs = herring.j)
-    d2<-read.csv("raw-annotations/NeckPt_15min_210313.csv", stringsAsFactors = F) %>% 
+    d2<-read.csv("raw-annotations/NeckPt_15min_210313_PE.csv", stringsAsFactors = F) %>% 
       mutate(site = "Neck Point (2021)") 
   }
   
@@ -142,7 +144,7 @@ combine_with_annotations <- function(site_description, site_file_name, towsey_di
       secintofile = samp.start.min * 60, # needed to correct error in csv data
       minintofile = secintofile / 60,
       # this is the date-time the file started recording
-      file_dt = ymd_hms(paste(year, month, day, hr, min, sec)),
+      file_dt = ymd_hms(paste(year, month, day, hr, min, "00")),
       # convert interval to seconds and double to fill in gaps
       datetime = file_dt + (minintofile * 60),
       bin15min = ifelse(min < 30, 0, 30)
@@ -161,7 +163,7 @@ combine_with_annotations <- function(site_description, site_file_name, towsey_di
              remove=FALSE)%>%
     mutate(samp.tot.sec = 900,
            # this is the date-time the file started recording
-           file_dt = ymd_hms(paste(year, month, day, hr, min, sec)),
+           file_dt = ymd_hms(paste(year, month, day, hr, min, "00")),
            # d=as.numeric(day),
            # hr=as.numeric(hr),
            min=as.numeric(min),
@@ -226,7 +228,7 @@ combine_towsey_data <- function(file_directory) {
     mutate(
       trap_id = as.numeric(trap_id),
       # this is the date-time when the file started recording
-      file_dt = ymd_hms(paste(yr, mnth, day, hr, min, sec)),
+      file_dt = ymd_hms(paste(yr, mnth, day, hr, min, "00")),
       minintofile = Index,
       # calculate datetime for each interval
       datetime = file_dt + (minintofile * 60),
@@ -251,9 +253,9 @@ combine_towsey_data <- function(file_directory) {
 
 # list_sites <- tribble(
 #   ~site_description, ~site_file_name,
-#   "Neck Point (2021)", "neckpt"
-#   # "Denman (2020)", "denman",
-#   # "Collishaw (2020)", "collishaw"
+# #   "Neck Point (2021)", "neckpt"
+# #   # "Denman (2020)", "denman",
+#   "Collishaw (2020)", "collishaw"
 # )
 # list_sites$towsey_directory <- towsey_directory
 
