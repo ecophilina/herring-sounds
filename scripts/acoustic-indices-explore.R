@@ -63,21 +63,25 @@ herring.col<-data.frame(herring.hs=unique(d$herring.hs))%>%
   arrange(herring.hs)%>%
   # mutate(herring.index=viridis::mako(4,end=1),
   #        herring.index=ifelse(herring.hs==0, "black", herring.index))
-  mutate(herring.index=viridis::viridis(4,end=1),
-         herring.index=ifelse(herring.hs==0, "black", herring.index))
+  mutate(herring.index=viridis::plasma(4,end=1),
+         herring.index=ifelse(herring.hs==0, "white", herring.index))
+# mutate(herring.index=viridis::viridis(4,end=1),
+       # herring.index=ifelse(herring.hs==0, "white", herring.index))
 
 boat.col<-data.frame(boat=unique(d$boat))%>%
   arrange(boat)%>% 
   # mutate(boat.index=viridis::viridis(3, begin = 0.25, end=1))
   # mutate(boat.index=viridis::mako(3, begin = 0.25, end=1))
-  mutate(boat.index=viridis::inferno(3,begin = 0.2, end=0.7))
+  mutate(boat.index=viridis::plasma(3,begin = 0.2, end=0.7))
 
 waves.col<-data.frame(waves=unique(d$waves))%>%
   arrange(waves)%>%
   # mutate(waves.index=viridis::viridis(4,end=1),
-  #        waves.index=ifelse(waves==0, "black", waves.index))
-  mutate(waves.index=viridis::mako(4,end=1),
-         waves.index=ifelse(waves==0, "black", waves.index))
+  #        waves.index=ifelse(waves==0, "white", waves.index))
+mutate(waves.index=viridis::plasma(4,end=1),
+       waves.index=ifelse(waves==0, "white", waves.index))
+  # mutate(waves.index=viridis::mako(4,end=1),
+  #        waves.index=ifelse(waves==0, "white", waves.index))
 # mutate(waves.index=viridis::mako(4,end=.8))
 
 d3<-left_join(d,herring.col)%>%
@@ -88,6 +92,7 @@ d3<-left_join(d,herring.col)%>%
     herring.index, boat.index, waves.index),
     names_to="Index",
     values_to="colors")%>%
+  mutate(colors = ifelse(colors == "white" & samp.tot.sec == 900, "grey", colors)) %>%
   select(site,datetime,plot_time,Index,colors)%>%
   distinct()
 
@@ -95,7 +100,7 @@ d3$Index<-factor(d3$Index,levels=c(#"FalseColor.index","FalseColor.rda",
   "herring.index", "boat.index","waves.index"),
   labels = c(#"False Color\nIndex", "False Color\nRDA",
     "Herring",
-    "Boat Noise","Waves"))
+    "Boats","Waves"))
 
 ggplot(d3,aes(x=plot_time,y=1,fill=colors))+
   geom_tile(width = 1000)+
@@ -103,7 +108,7 @@ ggplot(d3,aes(x=plot_time,y=1,fill=colors))+
   facet_grid(Index~site,scales="free")+
   coord_cartesian(expand = F) +
   theme_sleek() +
-  theme(#panel.background = element_rect(fill = "black"),
+  theme(panel.background = element_rect(fill = "black"),
     axis.text.y = element_blank(),
     axis.title.y = element_blank(),
     axis.ticks.y=element_blank())
@@ -113,14 +118,35 @@ ggplot(d3,aes(x=plot_time,y=1,fill=colors))+
 
 ### merge frequency level scores with summary that contains annotations----
 
-ld <- readRDS(paste0(output_parent_directory, "towsey-indices-", site_file_name, ".rds"))%>%
+ld1 <- readRDS(paste0(output_parent_directory, "towsey-indices-denman.rds"))%>%
+  mutate(site_file = "denman") %>%
   select( -trap_id, 
           #-yr,-mnth,-day,-hr,-min,-sec,
           -file_dt,
           # -minintofile,
           -datetime,-plot_time)
+
+ld2 <- readRDS(paste0(output_parent_directory, "towsey-indices-collishaw.rds"))%>%
+  mutate(site_file = "collishaw") %>%
+  select( -trap_id, 
+          #-yr,-mnth,-day,-hr,-min,-sec,
+          -file_dt,
+          # -minintofile,
+          -datetime,-plot_time)
+ld3 <- readRDS(paste0(output_parent_directory, "towsey-indices-neckpt.rds"))%>%
+  mutate(site_file = "neckpt") %>%
+  select( -trap_id, 
+          #-yr,-mnth,-day,-hr,-min,-sec,
+          -file_dt,
+          # -minintofile,
+          -datetime,-plot_time)
+
+ld <- bind_rows(ld1, ld2, ld3)
+
 # unique(ld$index_type)
 unique(ld$site)
+
+
 
 # to test if join working as should...
 # %>% select("site", "file_dt", "minintofile", "herring.hs") 
@@ -142,53 +168,90 @@ unique(dat$file_dt)
 unique(dat$freq_bin_num)
 
 dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
-unique(dat$kHz)
+# unique(dat$kHz)
 
 
-plot_single_index <- function(data,
-                              index) {
-  data %>%
-    filter(index_type == {{ index }}) %>%
-    # filter pulse at start of each file and high and low bands that distract
-    filter(minintofile != 0 & kHz > 0.1 & kHz < 10.5) %>%
-    ggplot(aes(plot_time, kHz, colour = score, fill = score)) +
-    # geom_tile() +
-    geom_raster() +
-    scale_colour_viridis_c(option = "turbo") +
-    scale_fill_viridis_c(option = "turbo") +
-    coord_cartesian(expand = FALSE) +
-    theme_sleek() +
-    theme(
-      axis.title.x = element_blank(),
-      panel.background = element_rect(fill = "black")
-    ) +
-    ggtitle(paste0(data$site[1]), subtitle = index)
-}
+p <- dat %>% filter(samp.tot.sec == 60) %>%
+  filter(index_type %in% c("ACI", "BGN", "RPS")) %>%
+  # group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
+  ggplot(aes(kHz, score,
+             fill = as.factor(herring.hs),
+             colour = as.factor(herring.hs)
+  )) +
+  # geom_point(alpha = 0.5) +
+  geom_smooth() +
+  facet_wrap(~index_type, scales = "free", ncol = 3) +
+  # scale_x_continuous(trans = "sqrt") +
+  scale_fill_viridis_d(option = "plasma") +
+  scale_colour_viridis_d(option = "plasma") +
+  ylab("Acoustic Index Score") +
+  theme_sleek()
+
+# # ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-all.pdf"), width = 8, height = 5)
+ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-subset2.png"), width = 10, height = 2.5)
+
+# now focus on just one site
+
+dat <- dat %>% filter(site_file == site_file_name)
+unique(dat$site_file)
+unique(dat$site)
+
+# dat %>% filter(samp.tot.sec == 60) %>%
+#   # group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
+#   ggplot(aes(kHz, score,
+#              fill = as.factor(herring.hs),
+#              colour = as.factor(herring.hs)
+#   )) +
+#   # geom_point(alpha = 0.5) +
+#   geom_smooth() +
+#   facet_wrap(~index_type, scales = "free") +
+#   # scale_x_continuous(trans = "sqrt") +
+#   scale_fill_viridis_d() +
+#   scale_colour_viridis_d() +
+#   ylab("Acoustic Index Score") +
+#   theme_sleek()
+# 
+# ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
+
+
+
+# plot_single_index <- function(data,
+# index) {
+#   data %>%
+#     filter(index_type == {{ index }}) %>%
+#     # filter pulse at start of each file and high and low bands that distract
+#     filter(minintofile != 0 & kHz > 0.1 & kHz < 10.5) %>%
+#     ggplot(aes(plot_time, kHz, colour = score, fill = score)) +
+#     # geom_tile() +
+#     geom_raster() +
+#     scale_colour_viridis_c(option = "turbo") +
+#     scale_fill_viridis_c(option = "turbo") +
+#     coord_cartesian(expand = FALSE) +
+#     theme_sleek() +
+#     theme(
+#       axis.title.x = element_blank(),
+#       panel.background = element_rect(fill = "black")
+#     ) +
+#     ggtitle(paste0(data$site[1]), subtitle = index)
+# }
 # 
 # g <- plot_single_index(dat, "ACI")
-# 
 # # most promising
 # g <- plot_single_index(dat, "BGN")
-# 
 # # promising
 # g <- plot_single_index(dat, "CVR")
-# 
 # g <- plot_single_index(dat, "ENT")
 # g <- plot_single_index(dat, "EVN")
-# 
 # # maybe useful
 # g <- plot_single_index(dat, "PMN")
 # 
 # # looks promising
 # g <- plot_single_index(dat, "OSC")
-# 
 # g <- plot_single_index(dat, "RHZ")
 # g <- plot_single_index(dat, "RNG")
 # g <- plot_single_index(dat, "RPS")
 # g <- plot_single_index(dat, "RVT")
-# 
 # g <- plot_single_index(dat, "SPT")
-# 
 # 
 # (g + geom_point(
 #   data = filter(dat, index_type == "ACI" & herring.hs == 1),
@@ -199,7 +262,6 @@ plot_single_index <- function(data,
 #   colour = "white",
 #   inherit.aes = F, size = 2, shape = "|"
 # ))
-# 
 
 false_colour_plot <- function(indices,
                               data = dat) {
@@ -372,27 +434,26 @@ add_variable_to_FCP <- function(FCP,
   
 }
 
-
-add_var_bars_to_FCP <- function(FCP, 
+add_var_bars_to_FCP <- function(FCP, indices, 
                                 var_dat = d3, 
-                                indices = c("ENT", "EVN", "ACI"), 
                                 data = dat){
   
   .dat1 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 60)
   .dat2 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 900)
   
-  g <- FCP
+  g <- FCP + theme(axis.title.y = element_text(vjust = -5))
   
   g2 <- var_dat %>% filter(site == .dat1$site[1]) %>% ggplot(aes(x=plot_time,y=1,fill=colors))+
     geom_tile(width = 1000)+
     scale_fill_identity()+
-    facet_wrap(~Index, nrow =3)+
+    facet_wrap(~Index, nrow =3, switch = "y")+
     coord_cartesian(expand = F) + 
     # ggtitle(paste0(.dat1$site[1]) +
     theme_sleek() +
-    theme(#panel.background = element_rect(fill = "black"),
+    theme(panel.background = element_rect(fill = "black"),
       strip.background = element_blank(),
-      strip.text.x = element_blank(),
+      strip.text.y.left = element_text(angle = 0),
+      strip.placement = "outside",
       axis.text = element_blank(),
       axis.title = element_blank(),
       axis.ticks =element_blank())
@@ -403,13 +464,13 @@ add_var_bars_to_FCP <- function(FCP,
   #                  #                   " dominate > 10% of time)\nred = ", indices[1], 
   #                  #                   ", green = ", indices[2], ", blue = ", indices[3])
   #                  )
-  
-  g /g2 + plot_layout(heights = c(3,1))
+  # browser()
+  g /g2 + plot_layout(heights = c(3,1.2))
   
   ggsave(paste0(figure_directory, "false-colour-spectrogram-", 
                 paste(indices, collapse = "-"), "-", 
-                site_file_name, ".png"), 
-         width = 12, height = 4)
+                site_file_name, "2.png"), 
+         width = 10, height = 3)
   
 }
 
@@ -468,52 +529,22 @@ add_var_bars_to_FCP <- function(FCP,
 # 
 # 
 # 
-# dat %>% filter(samp.tot.sec == 60) %>% 
-#   group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
-#   ggplot(aes(kHz, score,
-#              fill = as.factor(herring.hs),
-#              colour = as.factor(herring.hs)
-#   )) +
-#   # geom_point(alpha = 0.5) +
-#   geom_smooth() + 
-#   facet_wrap(~index_type, scales = "free") +
-#   # scale_x_continuous(trans = "sqrt") +
-#   scale_fill_viridis_d() +
-#   scale_colour_viridis_d() +
-#   theme_sleek()
-# 
-# ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
-# 
 
 
 
 # using vars with the strongest relationships with herring
-
-# no denoise
-list_indices <- list(
-c("ENT", "BGN", "RVT"),
-c("ENT", "BGN", "RPS"),
-c("ENT", "BGN", "OSC"),
-c("ENT", "BGN", "ACI")
-)
+# 
+# # no denoise
+# list_indices <- list(
+# c("ENT", "BGN", "RVT"),
+# c("ENT", "BGN", "RPS"),
+# c("ENT", "BGN", "OSC"),
+# c("ENT", "BGN", "ACI")
+# )
 
 # narrowband denoise based on smooths
 list_indices <- list(
-  # c("EVN", "RNG", "SPT"),
-  # c("CVR", "BGN", "ACI")
-  
-  # c("ACI", "BGN", "CVR"),
-  # c("ACI", "BGN", "ENT"),
-  # c("OSC", "BGN", "RPS"),
-  # c("RPS", "BGN", "ACI"),
-  # c("EVN", "BGN", "OSC"),
-  # c("ENT", "BGN", "OSC")
   c("ACI", "BGN", "RPS")
-  # c("OSC", "BGN", "RPS"),
-  # c("EVN", "RNG", "SPT"),
-  # c("CVR", "EVN", "SPT"),
-  # c("CVR", "EVN", "RNG")
-  # c("OSC", "BGN", "ACI")
 )
 
 # 
@@ -525,7 +556,7 @@ list_indices <- list(
 
 for (i in list_indices){
   indices <- i
-  g <- false_colour_plot(indices) %>% add_var_bars_to_FCP()
+  g <- false_colour_plot(indices) %>% add_var_bars_to_FCP(indices = indices)
 }
 
 
