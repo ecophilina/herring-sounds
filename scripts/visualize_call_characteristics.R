@@ -10,6 +10,22 @@ calls<-imp_raven(path="Call characterization",
 
 hs<-filter(calls,`Sound Type`=="hs")
 
+# get mean and confidence intervals
+sum.hs<-hs%>%
+  summarize(m.peak=mean(`Peak Freq (Hz)`),
+            ci.peak.90=qnorm(0.95)*(m.peak/sqrt(n())),
+            low.peak.90=m.peak-ci.peak.90,
+            high.peak.90=m.peak+ci.peak.90,
+            ci.peak.95=qnorm(0.975)*(m.peak/sqrt(n())),
+            low.peak.95=m.peak-ci.peak.95,
+            high.peak.95=m.peak+ci.peak.95,
+            ci.peak.99=qnorm(0.995)*(m.peak/sqrt(n())),
+            low.peak.99=m.peak-ci.peak.99,
+            high.peak.99=m.peak+ci.peak.99,
+            max.freq=max(`High Freq (Hz)`),
+            max.peak=max(`Peak Freq (Hz)`))
+
+table(hs$site,hs$spl_class)
 
 bp<-ggplot(data=hs)+
   theme_bw()+
