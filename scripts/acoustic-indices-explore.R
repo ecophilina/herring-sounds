@@ -173,12 +173,13 @@ dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
 
 p <- dat %>% filter(samp.tot.sec == 60) %>%
   filter(index_type %in% c("ACI", "BGN", "RPS")) %>%
+  # filter(boat < 2) %>% 
   # group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
   ggplot(aes(kHz, score,
              fill = as.factor(herring.hs),
              colour = as.factor(herring.hs)
   )) +
-  # geom_point(alpha = 0.5) +
+  # geom_point(alpha = 0.1) +
   geom_smooth() +
   facet_wrap(~index_type, scales = "free", ncol = 3) +
   # scale_x_continuous(trans = "sqrt") +
@@ -673,5 +674,170 @@ dat %>% filter(samp.tot.sec == 900) %>%
   theme_sleek()
 
 ggsave(paste0(figure_directory, "density-freq-level-15min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
+
+
+
+
+# calculate a herring band ACI ratio
+
+aci <- dat %>% filter(index_type == "ACI") 
+aci_n <- aci %>% 
+  filter(kHz > 2.6 & kHz < 3.2) %>% #99% CI of peak freq
+  group_by(filename) %>% 
+  summarise(aci_n = mean(score))
+aci_d <- aci %>% 
+  #low band
+  # filter(kHz > 1 & kHz <= 2) %>%
+  # high freq
+  filter(kHz > 7.5 & kHz < 8.1) %>% #similar width band just above max high frequency
+  group_by(filename) %>% 
+  summarise(aci_d = mean(score))
+aci_ratio <- left_join(aci_n, aci_d) %>% mutate(hb_aci = round((aci_n/aci_d) - 1, 3))
+
+hb_aci_sum <- d %>% 
+  # filter (samp.tot.sec == 60) %>% # for only 1 min
+  # filter (samp.tot.sec == 900) %>% # for only 15 min annotations 
+  select(filename, file_dt, 
+         minintofile,
+         # plot_time,
+         AcousticComplexity,
+         site, herring.hs, boat) %>% 
+  group_by(filename, file_dt, 
+           # minintofile,
+           # plot_time,
+           site) %>%
+  summarise(
+    ACI = mean(AcousticComplexity),
+    herring.hs = mean(herring.hs),
+    herring.f = round(mean(herring.hs)),
+    boat = mean(boat)
+  ) %>%
+  distinct() %>%
+  left_join(., aci_ratio)
+
+# hb_aci_sum %>%
+#   # filter( boat < 3) %>%
+#   # filter(boat < 2) %>%
+#   ggplot() + 
+#   # facet_wrap(~site)+ 
+#   # geom_jitter(aes(herring.f, hb_aci, colour = site))
+#   geom_violin(aes(as.factor(herring.f), hb_aci))
+
+
+hb_aci_lt2 <- hb_aci_sum %>%
+  filter(boat < 2) 
+hb_aci_gt2 <- hb_aci_sum %>%
+  filter(boat >= 2) 
+
+
+hb_aci_lt2$boat_group <- "Boat score < 2"
+hb_aci_gt2$boat_group <- "Boat score >= 2"
+
+bind_rows(hb_aci_gt2, hb_aci_lt2) %>%
+  ggplot() + 
+  facet_wrap(~boat_group)+ 
+  geom_hline(yintercept = 0, colour = "darkgrey") +
+  geom_jitter(aes(as.factor(herring.f), hb_aci#, colour = as.factor(herring.f)
+                  ), width = 0.1, alpha = 0.2) +
+  geom_boxplot(aes(as.factor(herring.f), hb_aci, fill = as.factor(herring.f)), alpha = 0.6,
+               outlier.shape=NA) +
+  scale_colour_viridis_d(option = "plasma") + 
+  scale_fill_viridis_d(option = "plasma") +
+  labs(x = "Herring score", y = "Herring band ACI ratio") +
+  ggsidekick::theme_sleek() + theme(legend.position = "none")
+
+ggsave("figs/herring-band-ratio-ACI.png", width = 6, height = 3)
+
+
+# hb_aci_sum %>%
+#   # filter(hb_aci_sum, boat < 3) %>%
+#   filter(hb_aci_sum, boat < 2) %>%
+#   ggplot() + 
+#   # facet_wrap(~site)+ 
+#   # geom_jitter(aes(herring.hs, hb_aci, colour = site)) 
+#   geom_violin(aes(herring.f, hb_aci))
+# 
+# filter(hb_aci_sum, boat < 3) %>%
+#   ggplot() + 
+#   geom_jitter(aes(herring.hs, ACI, colour = site)) + 
+#   facet_wrap(~site)
+# 
+# ggplot(hb_aci_sum) + geom_jitter(aes(aci_d, aci_n, colour = herring.hs)) + facet_wrap(~site)
+# 
+
+
+# try for RPS?
+# calculate a herring band RPS ratio
+
+rps <- dat %>% filter(index_type == "RPS") 
+rps_n <- rps %>% 
+  filter(kHz > 2.6 & kHz < 3.2) %>% #99% CI of peak freq
+  group_by(filename) %>% 
+  summarise(rps_n = mean(score))
+rps_d <- rps %>% 
+  #low band
+  # filter(kHz > 1 & kHz <= 2) %>%
+  # high freq
+  filter(kHz > 7.5 & kHz < 8.1) %>% #similar width band just above max high frequency
+  group_by(filename) %>% 
+  summarise(rps_d = mean(score))
+rps_ratio <- left_join(rps_n, rps_d) %>% mutate(hb_rps = round((rps_n/rps_d) - 1, 3))
+
+hb_rps_sum <- d %>% 
+  # filter (samp.tot.sec == 60) %>% # for only 1 min
+  # filter (samp.tot.sec == 900) %>% # for only 15 min annotations 
+  select(filename, file_dt, 
+         minintofile,
+         # plot_time,
+         AcousticComplexity,
+         site, herring.hs, boat) %>% 
+  group_by(filename, file_dt, 
+           # minintofile,
+           # plot_time,
+           site) %>%
+  summarise(
+    # ACI = mean(AcousticComplexity),
+    herring.hs = mean(herring.hs),
+    herring.f = round(mean(herring.hs)),
+    boat = mean(boat)
+  ) %>%
+  # distinct() %>%
+  left_join(., rps_ratio)
+# hb_rps_sum  <-  rps %>% select(filename, )
+
+
+# hb_rps_sum %>%
+#   # filter( boat < 3) %>%
+#   # filter(boat < 2) %>%
+#   ggplot() + 
+#   # facet_wrap(~site)+ 
+#   # geom_jitter(aes(herring.f, hb_rps, colour = site))
+#   geom_violin(aes(as.factor(herring.f), hb_rps))
+
+
+hb_rps_lt2 <- hb_rps_sum %>%
+  filter(boat < 2) 
+hb_rps_gt2 <- hb_rps_sum %>%
+  filter(boat >= 2) 
+
+hb_rps_lt2$boat_group <- "Boat score < 2"
+hb_rps_gt2$boat_group <- "Boat score >= 2"
+
+bind_rows(
+  hb_rps_gt2,
+  hb_rps_lt2) %>%
+  ggplot() + 
+  facet_wrap(~boat_group)+ 
+  geom_hline(yintercept = 0, colour = "darkgrey") +
+  geom_jitter(aes(as.factor(herring.f), hb_rps#, colour = as.factor(herring.f)
+  ), width = 0.1, alpha = 0.2) +
+  geom_boxplot(aes(as.factor(herring.f), hb_rps, fill = as.factor(herring.f)), alpha = 0.7,
+               outlier.shape=NA) +
+  scale_colour_viridis_d(option = "plasma") + 
+  scale_fill_viridis_d(option = "plasma") +
+  labs(x = "Herring score", y = "Herring band RPS ratio") +
+  ggsidekick::theme_sleek() + theme(legend.position = "none")
+
+ggsave("figs/herring-band-ratio-RPS.png", width = 6, height = 3)
 
 
