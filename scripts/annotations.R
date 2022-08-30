@@ -309,7 +309,7 @@ quiet_samp_mins <- dat %>%
   filter(SPL2to6kHz < 89 & herring.hs >= 3) %>%
   # filter(SPL < 100 & herring.hs >= 3) %>% 
   mutate(spl_class = "quiet")%>% 
-  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz)
+  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz, herring.hs)
   # select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.2to1kHz, SPL2to3.5kHz, SPL6to24kHz) 
 
 mid_samp_counts <- dat %>% 
@@ -322,7 +322,7 @@ mid_samp_mins <- dat %>%
   filter(SPL2to6kHz >= 90 & SPL2to6kHz < 99 & herring.hs >= 3) %>%
   # filter(SPL >= 100 & SPL < 130 & herring.hs >= 3) %>% 
   mutate(spl_class = "mid") %>% 
-  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz)
+  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz, herring.hs)
   # select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.2to1kHz, SPL2to3.5kHz, SPL6to24kHz) 
 
 loud_samp_counts <- dat %>% 
@@ -335,7 +335,7 @@ loud_samp_mins <- dat %>%
   filter(SPL2to6kHz >= 100 & herring.hs >= 1) %>%
   # filter(SPL >= 130 & herring.hs >= 1) %>% 
   mutate(spl_class = "loud")%>% 
-  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz)
+  select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.02to2kHz, SPL2to6kHz, SPL6to24kHz, herring.hs)
   # select(spl_class, site, filename, samp.start.min, secintofile, SPL, SPL0.2to1kHz, SPL2to3.5kHz, SPL6to24kHz) 
 
 samp_counts <- bind_rows(quiet_samp_counts, mid_samp_counts, loud_samp_counts)
