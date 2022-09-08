@@ -447,6 +447,7 @@ alldat <- bind_rows(dat1, dat2) %>% filter(site !="Neck Point (2020)")%>%
          SPL2to3.5kHz_st = scale(SPL2to3.5kHz), SPL2to3.5kHz_mean = attr(scale(SPL2to3.5kHz),"scaled:center"),
          SPL6to24kHz_st = scale(SPL6to24kHz), SPL6to24kHz_mean = attr(scale(SPL6to24kHz),"scaled:center")) %>% ungroup()
 
+saveRDS(alldat, "wdata/all-annotations.rds")
 
 # explore boats with violins
 ggplot(alldat, aes((boat), SPL))+ geom_point()
@@ -491,6 +492,76 @@ ggplot(alldat, aes(SPL, herring.hs,  colour = site)) + geom_point() + facet_wrap
 
 
 # combined
+
+filedat <- dat %>% filter(site !="Neck Point (2020)") %>% group_by(filename, site) %>%
+  summarise(
+    herring.hs = mean(herring.hs),
+    herring.f = (mean(herring.hs)),
+    boat = (mean(boat)),
+    waves = (mean(waves)),
+    fish = (mean(fish.knock, na.rm = T)),
+    invert = (mean(invert.snap, na.rm = T)),
+    splash = (mean(splahes, na.rm = T)),
+    rustle = (mean(rustling, na.rm = T)),
+    tonal = (mean(tonal)),
+    n = n()
+  ) %>% pivot_longer(3:11, names_to = "sound", values_to = "score") %>%
+  mutate(site = as.factor(site))
+
+filedat2 <- alldat %>% filter(site !="Neck Point (2020)") %>% group_by(filename, site) %>%
+  summarise(
+    `Herring` = ifelse(herring.hs > 0 & herring.hs <= 1, 1, round(mean(herring.hs))),
+    `Pinnipeds` = ifelse(pinniped > 0 & pinniped <= 1, 1, round(mean(pinniped))),
+    `Birds` = ifelse(gull > 0 & gull  <= 1, 1, round(mean(gull ))),
+    `Boat noise` = ifelse(boat>0 & boat <= 1, 1, round(mean(boat))),
+    `Wave noise` = ifelse(waves>0 & waves <= 1, 1, round(mean(waves))),
+    `Fish knocks` = ifelse(fish.knock>0 & fish.knock <= 1, 1, round(mean(fish.knock, na.rm = T))),
+    `Invertebrate snaps` = ifelse(invert.snap>0 & invert.snap <= 1, 1, round(mean(invert.snap, na.rm = T))),
+    `Splashing` = ifelse(splahes>0 & splahes <= 1, 1, round(mean(splahes, na.rm = T))),
+    `Other mechanical` = ifelse(rustling>0 & rustling <= 1, 1, round(mean(rustling, na.rm = T))),
+    `Pinniped deterrent` = ifelse(tonal>0 & tonal <= 1, 1, round(mean(tonal, na.rm = T))),
+    n = n()
+  ) %>% pivot_longer(3:12, names_to = "sound", values_to = "score") %>%
+  mutate(
+    # sound = factor(sound, levels = c(
+    # `Herring FRT`, `Rustling`, `Splashing`, 
+    # `Sea lions`, `Gulls`, `Sea lion deterrent`,
+    # `Fish knocks`, `Invertebrate snaps`, 
+    # `Boat noise`, `Wave noise`
+    # )),
+    Site = as.factor(site)
+  )
+
+filedat2$sound <- factor(filedat2$sound, levels = c("Herring", 
+  "Boat noise", "Wave noise", 
+  "Other mechanical", 
+  "Birds", "Pinnipeds", "Splashing",
+  "Fish knocks", "Invertebrate snaps", 
+  "Pinniped deterrent"
+))
+
+filedat2 %>% filter (sound != "Splashing" &
+                       sound != "Fish knocks" &
+                     score != 0 ) %>% 
+ggplot() + geom_bar(aes(score, #colour = Site, 
+                        fill = Site), alpha = 0.85) +
+  scale_colour_viridis_d(end = 0.9) +
+  scale_fill_viridis_d(end = 0.9) +
+  facet_wrap(~sound, scales = "free_y", ncol = 4) +
+  labs(x = "Sound intensity score", y = paste0("Number of files")) +
+  ggsidekick::theme_sleek() #+ theme(legend.position = "none")
+
+ggsave("figs/detection-barplots.png", width = 7.5, height = 3)
+
+
+# filedat2 %>% filter (sound != "herring.f" & sound != "herring.hs") %>%
+#   ggplot() + geom_density(aes(score, colour = site, fill = site), alpha = 0.2) +
+#   scale_colour_viridis_d(end = 0.9) +
+#   scale_fill_viridis_d(end = 0.9) +
+#   facet_wrap(~sound, scales = "free") +
+#   # labs(x = "Herring score", y = paste0("Herring band ", index_type, " ratio")) +
+#   ggsidekick::theme_sleek() + theme(legend.position = "none")
+
 
 alldat %>% group_by(boat, waves) %>% summarise(n = n())%>%
   ggplot(aes(boat, waves, size = n)) + 
