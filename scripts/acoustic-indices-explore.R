@@ -702,28 +702,126 @@ hb_ratio_sum <- d %>%
 
 
 hb_ratio_lt2 <- hb_ratio_sum %>%
-  filter(boat < 2) 
+  filter(boat <= 2) 
 hb_ratio_gt2 <- hb_ratio_sum %>%
-  filter(boat >= 2) 
+  filter(boat > 2) 
 
-hb_ratio_lt2$boat_group <- "Boat score < 2"
-hb_ratio_gt2$boat_group <- "Boat score >= 2"
+hb_ratio_lt2$boat_group <- "Boat score <= 2"
+hb_ratio_gt2$boat_group <- "Boat score = 3"
 
 hb <- bind_rows(hb_ratio_gt2, hb_ratio_lt2)
 
 hb$group <- 1
 
+# 
+# 
+# stat.test <- hb %>% group_by(boat_group) %>% wilcox_test(hb_ratio ~ herring.f, 
+#                                                          alternative = "less", 
+#                                                          ref.group = "0") %>% 
+#   add_xy_position(x = "herring.f") %>% filter(p.adj.signif!="ns")
+# 
+# g2 <- hb %>%
+#   ggplot() + 
+#   facet_wrap(~boat_group)+ 
+#   geom_hline(yintercept = 0, colour = "darkgrey") +
+#   geom_jitter(aes(as.factor(herring.f),hb_ratio#, colour = as.factor(herring.f)
+#   ), width = 0.1, alpha = 0.2) +
+#   geom_boxplot(aes(as.factor(herring.f), hb_ratio, fill = as.factor(herring.f)), alpha = 0.7,
+#                outlier.shape=NA) +
+#   stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
+#   scale_colour_viridis_d(option = "plasma") + 
+#   scale_fill_viridis_d(option = "plasma") +
+#   labs(x = "Herring score", y = paste0("Herring band ", index_type, " ratio")) +
+#   ggsidekick::theme_sleek() + theme(legend.position = "none")
+
+# ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-boat.png"), width = 5.5, height = 3.5)
+
+
+
+hb %>% mutate(pos_ratio = ifelse(hb_ratio > 0, 1, 0)) %>% group_by(herring.f, pos_ratio) %>% summarise(n = n())
+
+# herring.f pos_ratio     n
+# <dbl>     <dbl> <int>
+# 1         0         0   306
+# 2         0         1    86
+# 5         2         0    13
+# 6         2         1    47
+# 7         3         1     7
+
+# 13 false negatives
+47 + 7 # 54 true positives
+86 # 137 false positives
+306  # 387 true negatives
+
+hb %>% group_by(herring.f) %>% summarise(n = n())
+# # A tibble: 4 × 2
+# herring.f     n
+# <dbl> <int>
+#   1         0   392
+# 3         2    60
+# 4         3     7
+
+# total negatives 
+392 
+
+# false positive rate (false positives/true negatives)
+86/392 
+
+# false negative rate (false negative/true positives)
+13/67
+
+# What about just for boat <= 2?
+hb %>% mutate(pos_ratio = ifelse(hb_ratio > 0, 1, 0)) %>% 
+  filter(boat != 3) %>%
+  group_by(herring.f, pos_ratio) %>% summarise(n = n())
+
+
+# herring.f pos_ratio     n
+# <dbl>     <dbl> <int>
+#   1         0         0   122
+# 2         0         1    20
+# 5         2         0     9
+# 6         2         1    44
+# 7         3         1     7
+
+# 9 false negatives
+44 + 7 # true positives
+20 #+ 35 # false positives
+122 # true negatives
+
+hb %>% group_by(herring.f) %>%   filter(boat != 3) %>% summarise(n = n())
+# # A tibble: 4 × 2
+# herring.f     n
+# <dbl> <int>
+#   1         0   142
+# 3         2    53
+# 4         3     7
+
+
+
+# false positive rate (false positives/true negatives)
+20/142
+
+# false negative rate (false negative/true positives)
+9/(53 + 7)
+
+
+
+
 
 # start with exploring high band (aka. ratio denominator) ----
 
-# boat
 
+
+# boat
 stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ boat, 
                                                    alternative = "less", 
                                                    ref.group = "1") %>% 
-  add_xy_position(x = "boat") %>% filter(p.adj.signif!="ns")
+  add_xy_position(x = "boat") %>% 
+  mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.22, y.position)) %>% 
+  filter(p.adj.signif!="ns")
 
-hb %>% ggplot() + 
+gb <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+
   # geom_hline(yintercept = 0, colour = "darkgrey") +
   geom_jitter(aes(as.factor(boat), ratio_d
@@ -746,9 +844,9 @@ stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ waves,
                                                    alternative = "less", 
                                                    ref.group = "0") %>% 
   add_xy_position(x = "waves") %>% filter(p.adj.signif!="ns") %>% 
-  mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.22, y.position))
+  mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.15, y.position))
 
-hb %>% ggplot() + 
+gw <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+ 
   geom_jitter(aes(as.factor(waves), ratio_d#, colour = as.factor(herring.f)
   ), width = 0.1, alpha = 0.2) +
@@ -764,13 +862,14 @@ ggsave(paste0("figs/high-band-", index_type, "-waves.png"), width = 6, height = 
 
 
 #inverts
-
 stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ invert, 
                                                    alternative = "less", 
                                                    ref.group = "1") %>% 
-  add_xy_position(x = "invert") %>% filter(p.adj.signif!="ns")
+  add_xy_position(x = "invert") %>% 
+  mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.12, y.position)) %>% 
+  filter(p.adj.signif!="ns")
 
-hb %>% ggplot() + 
+gi <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+ 
   geom_jitter(aes(as.factor(invert), ratio_d#, colour = as.factor(herring.f)
   ), width = 0.1, alpha = 0.2) +
@@ -812,7 +911,7 @@ stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ rustle,
                                                    ref.group = "0") %>% 
   add_xy_position(x = "rustle") %>% filter(p.adj.signif!="ns")
 
-hb %>% ggplot() + 
+gr <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+ 
   # geom_hline(yintercept = 0, colour = "darkgrey") +
   geom_jitter(aes(as.factor(rustle), ratio_d#, colour = as.factor(herring.f)
@@ -822,7 +921,7 @@ hb %>% ggplot() +
   stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
   scale_colour_viridis_d(option = "plasma") + 
   scale_fill_viridis_d(option = "plasma") +
-  labs(x = "Rustling score", y = paste0("High band (7.6 - 8.0 kHz) ", index_type, "")) +
+  labs(x ="Other mechanical score", y = paste0("High band (7.6 - 8.0 kHz) ", index_type, "")) +
   ggsidekick::theme_sleek() + theme(legend.position = "none")
 
 ggsave(paste0("figs/high-band-", index_type, "-rustle.png"), width = 6, height = 3)
@@ -833,7 +932,7 @@ stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ herring.f,
                                                    ref.group = "0") %>% 
   add_xy_position(x = "herring.f") %>% filter(p.adj.signif!="ns")
 
-hb %>% ggplot() + 
+gh <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+ 
   # geom_hline(yintercept = 0, colour = "darkgrey") +
   geom_jitter(aes(as.factor(herring.f), ratio_d#, colour = as.factor(herring.f)
@@ -855,7 +954,7 @@ stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ Pinnipeds,
                                                    ref.group = "0") %>% 
   add_xy_position(x = "Pinnipeds") %>% filter(p.adj.signif!="ns")
 
-hb %>% ggplot() + 
+gp <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+ 
   # geom_hline(yintercept = 0, colour = "darkgrey") +
   geom_jitter(aes(as.factor(Pinnipeds), ratio_d#, colour = as.factor(herring.f)
@@ -872,19 +971,19 @@ ggsave(paste0("figs/high-band-", index_type, "-pinnipeds.png"), width = 6, heigh
 
 
 # high band vs. gull
-stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ Birds, 
-                                                   alternative = "less", 
-                                                   ref.group = "0") %>% 
-  add_xy_position(x = "Birds") %>% filter(p.adj.signif!="ns")
+# stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ Birds, 
+#                                                    alternative = "less", 
+#                                                    ref.group = "0") %>% 
+#   add_xy_position(x = "Birds") %>% filter(p.adj.signif!="ns") 
 
-hb %>% ggplot() + 
+gg <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+ 
   # geom_hline(yintercept = 0, colour = "darkgrey") +
   geom_jitter(aes(as.factor(Birds), ratio_d#, colour = as.factor(herring.f)
   ), width = 0.1, alpha = 0.2) +
   geom_boxplot(aes(as.factor(Birds), ratio_d), alpha = 0.7,
                outlier.shape=NA) +
-  stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
+  # stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
   scale_colour_viridis_d(option = "plasma") + 
   scale_fill_viridis_d(option = "plasma") +
   labs(x = "Bird score", y = paste0("High band (7.6 - 8.0 kHz) ", index_type, "")) +
@@ -893,62 +992,87 @@ hb %>% ggplot() +
 ggsave(paste0("figs/high-band-", index_type, "-bird.png"), width = 6, height = 3)
 
 
-
-### explore herring band on it's own
-
-stat.test <- hb %>% group_by(boat_group) %>% wilcox_test(ratio_n ~ herring.f,
-                                                         alternative = "less",
-                                                         ref.group = "0") %>%
-  add_xy_position(x = "herring.f") %>% filter(p.adj.signif!="ns")
-
-hb %>%
-  ggplot() +
-  facet_wrap(~boat_group)+
+gd <- hb %>% ggplot() + 
+  facet_wrap(~site, ncol = 4)+ 
   # geom_hline(yintercept = 0, colour = "darkgrey") +
-  geom_jitter(aes(as.factor(herring.f),ratio_n#, colour = as.factor(herring.f)
+  geom_jitter(aes(as.factor(`Pinniped deterrent`), ratio_d#, colour = as.factor(herring.f)
   ), width = 0.1, alpha = 0.2) +
-  geom_boxplot(aes(as.factor(herring.f), ratio_n, fill = as.factor(herring.f)), alpha = 0.7,
+  geom_boxplot(aes(as.factor(`Pinniped deterrent`), ratio_d), alpha = 0.7,
                outlier.shape=NA) +
-  stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
-  scale_colour_viridis_d(option = "plasma") +
+  # stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
+  scale_colour_viridis_d(option = "plasma") + 
   scale_fill_viridis_d(option = "plasma") +
-  labs(x = "Herring score", y = paste0("Herring band (2.7 - 3.1 kHz) ", index_type, "")) +
+  labs(x = "Pinniped deterrent score", y = paste0("High band (7.6 - 8.0 kHz) ", index_type, "")) +
   ggsidekick::theme_sleek() + theme(legend.position = "none")
 
-ggsave(paste0("figs/herring-band-", index_type, "-by-boat.png"), width = 6, height = 3)
+ggsave(paste0("figs/high-band-", index_type, "-deterrent.png"), width = 6, height = 3)
 
 
+
+
+gh <- gh + theme(axis.title.y = element_blank()) 
+
+gb <- gb + theme(axis.title.y = element_blank()
+                 # ,strip.text.x = element_blank()
+                 ) 
+gw <- gw + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank()) 
+gi <- gi + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank())
+gr <- gr + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank())
+gp <- gp + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank())
+gg <- gg + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank())
+gd <- gd + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank())
+
+ggallhigh <- grid.arrange(gh,gb, gw, gi, gr, gp, gg, gd,
+                   ncol = 2,
+                   left = paste0("High band (7.6 - 8.0 kHz) ", index_type, "")
+)
+
+ggsave(paste0("figs/high-band-", index_type, "-all-other-sounds.png"), 
+       plot=ggallhigh, width = 8, height = 10)
+
+
+
+### explore herring band on it's own
 
 stat.test2 <- hb %>% group_by(site) %>% #filter(rustle < 3) %>% 
   wilcox_test(ratio_n ~ rustle, 
               alternative = "less", 
               ref.group = "0") %>% 
-  add_xy_position(x = "rustle") %>% filter(p.adj.signif!="ns")
+  add_xy_position(x = "rustle") %>% filter(p.adj.signif!="ns") %>% 
+  mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.25, y.position))
 
-hb %>% ggplot() + 
+gr <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+ 
   # geom_hline(yintercept = 0, colour = "darkgrey") +
   geom_jitter(aes(as.factor(rustle), ratio_n#, colour = as.factor(rustle)
   ), width = 0.1, alpha = 0.2) +
-  geom_boxplot(aes(as.factor(rustle), ratio_n, fill = as.factor(rustle)), alpha = 0.7,
+  geom_boxplot(aes(as.factor(rustle), ratio_n#, fill = as.factor(rustle)
+                   ), alpha = 0.7,
                outlier.shape=NA) +
   stat_pvalue_manual(stat.test2, label = "p.adj.signif", tip.length = 0.01)+
   scale_colour_viridis_d(option = "plasma") + 
   scale_fill_viridis_d(option = "plasma") +
-  labs(x = "Rustling score", y = paste0("Herring band ", index_type, "")) +
+  labs(x ="Other mechanical score", y = paste0("Herring band ", index_type, "")) +
   ggsidekick::theme_sleek() + theme(legend.position = "none")
 
-ggsave(paste0("figs/herring-band-", index_type, "-rustle.png"), width = 6, height = 3)
+# ggsave(paste0("figs/herring-band-", index_type, "-rustle.png"), width = 6, height = 3)
 
 
-stat.test <- hb_ratio_sum %>% group_by(site) %>% #filter(rustle < 3) %>% 
+stat.test <- hb %>% group_by(site) %>% #filter(rustle < 3) %>% 
   wilcox_test(ratio_n ~ boat, 
               alternative = "less", 
               ref.group = "1") %>% 
-  add_xy_position(x = "boat") %>% filter(p.adj.signif!="ns")
+  add_xy_position(x = "boat") %>% 
+  mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.25, y.position)) %>% 
+  filter(p.adj.signif!="ns")
 
-hb_ratio_sum %>%
-  ggplot() + 
+gb <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+ 
   geom_jitter(aes(as.factor(boat), ratio_n ), width = 0.1, alpha = 0.2) +
   geom_boxplot(aes(as.factor(boat), ratio_n 
@@ -960,18 +1084,63 @@ hb_ratio_sum %>%
   scale_fill_viridis_d(option = "plasma") +
   labs(x = "Boat score", y = paste0("Herring band ", index_type, "")) +
   ggsidekick::theme_sleek() + theme(legend.position = "none")
+ggsave(paste0("figs/herring-band-", index_type, "-boats.png"), width = 6, height = 3)
 
-ggsave(paste0("figs/boats-in-herring-band-", index_type, ".png"), width = 4, height = 3)
+
+stat.test <- hb %>% group_by(boat_group) %>% wilcox_test(ratio_n ~ herring.f,
+                                                         alternative = "less",
+                                                         ref.group = "0") %>%
+  add_xy_position(x = "herring.f") %>% 
+  mutate(y.position = ifelse(boat_group == "Boat score <= 2", y.position -0.25, y.position)) %>%
+  filter(p.adj.signif!="ns")
+
+hb %>%  ggplot() +
+  facet_wrap(~boat_group)+
+  # geom_hline(yintercept = 0, colour = "darkgrey") +
+  geom_jitter(aes(as.factor(herring.f),ratio_n#, colour = as.factor(herring.f)
+  ), width = 0.1, alpha = 0.2) +
+  geom_boxplot(aes(as.factor(herring.f), ratio_n, fill = as.factor(herring.f)), alpha = 0.7,
+               outlier.shape=NA) +
+  stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
+  scale_colour_viridis_d(option = "plasma") +
+  scale_fill_viridis_d(option = "plasma") +
+  labs(x = "Herring score", y = paste0("Herring band (2.7 - 3.1 kHz) ", index_type, "")) +
+  ggsidekick::theme_sleek() + theme(legend.position = "none")
+ggsave(paste0("figs/herring-band-", index_type, "-by-boat-not-site.png"), width = 6, height = 3)
+
+stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_n ~ herring.f,
+                                                         alternative = "less",
+                                                         ref.group = "0") %>%
+  add_xy_position(x = "herring.f") %>% 
+  mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.25, y.position)) %>%
+  # mutate(y.position = ifelse(boat_group == "Boat score >= 2", y.position -0.25, y.position)) %>%
+  filter(p.adj.signif!="ns")
+
+gh <- hb %>%  ggplot() +
+  facet_wrap(~site)+
+  # geom_hline(yintercept = 0, colour = "darkgrey") +
+  geom_jitter(aes(as.factor(herring.f),ratio_n#, colour = as.factor(herring.f)
+  ), width = 0.1, alpha = 0.2) +
+  geom_boxplot(aes(as.factor(herring.f), ratio_n#, fill = as.factor(herring.f)
+                   ), alpha = 0.7,
+               outlier.shape=NA) +
+  stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
+  scale_colour_viridis_d(option = "plasma") +
+  scale_fill_viridis_d(option = "plasma") +
+  labs(x = "Herring score", y = paste0("Herring band (2.7 - 3.1 kHz) ", index_type, "")) +
+  ggsidekick::theme_sleek() + theme(legend.position = "none")
+ggsave(paste0("figs/herring-band-", index_type, "-by-site-bw.png"), width = 6, height = 3)
 
 
-stat.test <- hb_ratio_sum %>% group_by(site) %>% #filter(rustle < 3) %>% 
+stat.test <- hb %>% group_by(site) %>% #filter(rustle < 3) %>% 
   wilcox_test(ratio_n  ~ waves, 
               alternative = "less", 
               ref.group = "0") %>% 
-  add_xy_position(x = "waves") %>% filter(p.adj.signif!="ns")
+  add_xy_position(x = "waves") %>% 
+  mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.25, y.position)) %>% 
+  filter(p.adj.signif!="ns")
 
-hb_ratio_sum %>%
-  ggplot() + 
+gw <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+ 
   geom_jitter(aes(as.factor(waves), ratio_n ), width = 0.1, alpha = 0.2) +
   geom_boxplot(aes(as.factor(waves), ratio_n 
@@ -984,17 +1153,18 @@ hb_ratio_sum %>%
   labs(x = "Wave score", y = paste0("Herring band ", index_type, "")) +
   ggsidekick::theme_sleek() + theme(legend.position = "none")
 
-ggsave(paste0("figs/waves-in-herring-band-", index_type, ".png"), width = 4, height = 3)
+ggsave(paste0("figs/herring-band-", index_type, "-waves.png"), width = 4, height = 3)
 
 
-stat.test <- hb_ratio_sum %>% group_by(site) %>% #filter(rustle < 3) %>% 
+stat.test <- hb %>% group_by(site) %>% #filter(rustle < 3) %>% 
   wilcox_test(ratio_n  ~ invert, 
               alternative = "less", 
               ref.group = "1") %>% 
-  add_xy_position(x = "invert") %>% filter(p.adj.signif!="ns")
+  add_xy_position(x = "invert") %>% 
+  mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.14, y.position)) %>% 
+  filter(p.adj.signif!="ns")
 
-hb_ratio_sum %>%
-  ggplot() + 
+gi <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+
   geom_jitter(aes(as.factor(invert), ratio_n ), width = 0.1, alpha = 0.2) +
   geom_boxplot(aes(as.factor(invert), ratio_n 
@@ -1007,20 +1177,108 @@ hb_ratio_sum %>%
   labs(x = "Invertebrate snapping score", y = paste0("Herring band ", index_type, "")) +
   ggsidekick::theme_sleek() + theme(legend.position = "none")
 
-ggsave(paste0("figs/inverts-in-herring-band-", index_type, ".png"), width = 4, height = 3)
+ggsave(paste0("figs/herring-band-", index_type, "-inverts.png"), width = 4, height = 3)
 
+# # sample sizes too small
+# stat.test <- hb %>% group_by(site) %>% #filter(rustle < 3) %>% 
+#   wilcox_test(ratio_n  ~ Pinnipeds, 
+#               alternative = "less", 
+#               ref.group = "0") %>% 
+#   add_xy_position(x = "Pinnipeds") %>% filter(p.adj.signif!="ns")
+
+gp <- hb %>% ggplot() + 
+  facet_wrap(~site, ncol = 4)+
+  geom_jitter(aes(as.factor(Pinnipeds), ratio_n ), width = 0.1, alpha = 0.2) +
+  geom_boxplot(aes(as.factor(Pinnipeds), ratio_n 
+                   # , fill = as.factor(invert)
+  ), alpha = 0.7,
+  outlier.shape=NA) +
+  # stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
+  scale_colour_viridis_d(option = "plasma") + 
+  scale_fill_viridis_d(option = "plasma") +
+  labs(x = "Pinniped score", y = paste0("Herring band ", index_type, "")) +
+  ggsidekick::theme_sleek() + theme(legend.position = "none")
+
+ggsave(paste0("figs/herring-band-", index_type, "-pinnipeds.png"), width = 4, height = 3)
+
+# stat.test <- hb %>% group_by(group) %>% #filter(rustle < 3) %>% 
+#   wilcox_test(ratio_n  ~ Birds, 
+#               alternative = "less", 
+#               ref.group = "0") %>% 
+#   add_xy_position(x = "Birds") %>% filter(p.adj.signif!="ns")
+
+gg <- hb %>% ggplot() + 
+  facet_wrap(~site, ncol = 4)+
+  geom_jitter(aes(as.factor(Birds), ratio_n ), width = 0.1, alpha = 0.2) +
+  geom_boxplot(aes(as.factor(Birds), ratio_n 
+                   # , fill = as.factor(invert)
+  ), alpha = 0.7,
+  outlier.shape=NA) +
+  # stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
+  scale_colour_viridis_d(option = "plasma") + 
+  scale_fill_viridis_d(option = "plasma") +
+  labs(x = "Bird score", y = paste0("Herring band ", index_type, "")) +
+  ggsidekick::theme_sleek() + theme(legend.position = "none")
+
+ggsave(paste0("figs/herring-band-", index_type, "-gulls.png"), width = 4, height = 3)
+
+gd <- hb %>% ggplot() + 
+  facet_wrap(~site, ncol = 4)+ 
+  # geom_hline(yintercept = 0, colour = "darkgrey") +
+  geom_jitter(aes(as.factor(`Pinniped deterrent`), ratio_n#, colour = as.factor(herring.f)
+  ), width = 0.1, alpha = 0.2) +
+  geom_boxplot(aes(as.factor(`Pinniped deterrent`), ratio_n), alpha = 0.7,
+               outlier.shape=NA) +
+  # stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
+  scale_colour_viridis_d(option = "plasma") + 
+  scale_fill_viridis_d(option = "plasma") +
+  labs(x = "Pinniped deterrent score"#, y = paste0("High band (7.6 - 8.0 kHz) ", index_type, "")
+       ) +
+  ggsidekick::theme_sleek() + theme(legend.position = "none")
+
+ggsave(paste0("figs/herring-band-", index_type, "-deterrent.png"), width = 6, height = 3)
+
+
+
+
+gh <- gh + theme(axis.title.y = element_blank()) 
+
+gb <- gb + theme(axis.title.y = element_blank()
+                 # ,strip.text.x = element_blank()
+) 
+gw <- gw + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank()) 
+gi <- gi + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank())
+gr <- gr + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank())
+gp <- gp + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank())
+gg <- gg + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank())
+gd <- gd + theme(axis.title.y = element_blank(),
+                 strip.text.x = element_blank())
+
+ggallhb <- grid.arrange(gh,gb, gw, gi, gr, gp, gg, gd,
+                          ncol = 2,
+                          left = paste0("Herring band (2.6 – 3.2 kHz) ", index_type, "")
+)
+
+ggsave(paste0("figs/herring-band-", index_type, "-all-other-sounds.png"), 
+       plot=ggallhb, width = 8, height = 10)
 
 
 # explore ratio
 
-
-stat.test2 <- hb_ratio_sum %>% group_by(site) %>% #filter(rustle < 3) %>% 
+stat.test2 <- hb %>% group_by(site) %>% #filter(rustle < 3) %>% 
   wilcox_test(hb_ratio ~ rustle, 
               alternative = "less", 
               ref.group = "0") %>% 
-  add_xy_position(x = "rustle") %>% filter(p.adj.signif!="ns")
+  add_xy_position(x = "rustle") %>% 
+  mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.18, y.position)) %>% 
+  filter(p.adj.signif!="ns")
 
-hb_ratio_sum %>% ggplot() + 
+gr <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+ 
   geom_hline(yintercept = 0, colour = "darkgrey") +
   geom_jitter(aes(as.factor(rustle), hb_ratio#, colour = as.factor(rustle)
@@ -1030,7 +1288,7 @@ hb_ratio_sum %>% ggplot() +
   stat_pvalue_manual(stat.test2, label = "p.adj.signif", tip.length = 0.01)+
   scale_colour_viridis_d(option = "plasma") + 
   scale_fill_viridis_d(option = "plasma") +
-  labs(x = "Rustling score", y = paste0("Herring band ", index_type, " ratio")) +
+  labs(x ="Other mechanical score", y = paste0("Herring band ", index_type, " ratio")) +
   ggsidekick::theme_sleek() + theme(legend.position = "none")
 
 ggsave(paste0("figs/herring-band-ratio-", index_type, "-rustle.png"), width = 6, height = 3)
@@ -1038,15 +1296,14 @@ ggsave(paste0("figs/herring-band-ratio-", index_type, "-rustle.png"), width = 6,
 
 # check that patterns are as expected for boats and waves
 
-stat.test <- hb_ratio_sum %>% group_by(group) %>% #filter(rustle < 3) %>% 
+stat.test <- hb %>% group_by(group) %>% #filter(rustle < 3) %>% 
   wilcox_test(hb_ratio ~ boat, 
               alternative = "less", 
               ref.group = "1") %>% 
-  add_xy_position(x = "boat") %>% filter(p.adj.signif!="ns")
+  add_xy_position(x = "boat")  %>% 
+  filter(p.adj.signif!="ns")
 
-hb_ratio_sum %>%
-  ggplot() + 
-  # facet_wrap(~site, ncol = 4)+
+gb <- hb %>% ggplot() + 
   geom_hline(yintercept = 0, colour = "darkgrey") +
   geom_jitter(aes(as.factor(boat), hb_ratio), width = 0.1, alpha = 0.2) +
   geom_boxplot(aes(as.factor(boat), hb_ratio, fill = as.factor(boat)), alpha = 0.7,
@@ -1060,14 +1317,15 @@ hb_ratio_sum %>%
 ggsave(paste0("figs/boats-in-herring-band-ratio-", index_type, ".png"), width = 4, height = 3)
 
 
-stat.test <- hb_ratio_sum %>% group_by(group) %>% #filter(rustle < 3) %>% 
+stat.test <- hb %>% group_by(group) %>% #filter(rustle < 3) %>% 
   wilcox_test(hb_ratio ~ waves, 
               alternative = "less", 
               ref.group = "0") %>% 
-  add_xy_position(x = "waves") %>% filter(p.adj.signif!="ns")
+  add_xy_position(x = "waves") %>% 
+  mutate(y.position = y.position -0.08) %>% 
+  filter(p.adj.signif!="ns")
 
-hb_ratio_sum %>%
-  ggplot() + 
+gw <- hb %>% ggplot() + 
   geom_hline(yintercept = 0, colour = "darkgrey") +
   geom_jitter(aes(as.factor(waves), hb_ratio), width = 0.1, alpha = 0.2) +
   geom_boxplot(aes(as.factor(waves), hb_ratio, fill = as.factor(waves)), alpha = 0.7,
@@ -1081,15 +1339,14 @@ hb_ratio_sum %>%
 ggsave(paste0("figs/waves-in-herring-band-ratio-", index_type, ".png"), width = 4, height = 3)
 
 
-stat.test <- hb_ratio_sum %>% group_by(group) %>% #filter(rustle < 3) %>% 
+stat.test <- hb %>% group_by(group) %>% #filter(rustle < 3) %>% 
   wilcox_test(hb_ratio ~ invert, 
               alternative = "less", 
               ref.group = "1") %>% 
-  add_xy_position(x = "invert") %>% filter(p.adj.signif!="ns")
+  add_xy_position(x = "invert") %>% 
+  filter(p.adj.signif!="ns")
 
-hb_ratio_sum %>%
-  ggplot() + 
-  # facet_wrap(~site, ncol = 4)+
+gi <- hb %>% ggplot() + 
   geom_hline(yintercept = 0, colour = "darkgrey") +
   geom_jitter(aes(as.factor(invert), hb_ratio), width = 0.1, alpha = 0.2) +
   geom_boxplot(aes(as.factor(invert), hb_ratio, fill = as.factor(invert)), alpha = 0.7,
@@ -1101,6 +1358,40 @@ hb_ratio_sum %>%
   ggsidekick::theme_sleek() + theme(legend.position = "none")
 
 ggsave(paste0("figs/inverts-in-herring-band-ratio-", index_type, ".png"), width = 4, height = 3)
+
+stat.test <- hb %>% group_by(group) %>% #filter(rustle < 3) %>% 
+  wilcox_test(hb_ratio ~ rustle, 
+              alternative = "less", 
+              ref.group = "0") %>% 
+  add_xy_position(x = "rustle") %>% 
+  mutate(y.position = y.position -0.12) %>% 
+  filter(p.adj.signif!="ns")
+
+gr <- hb %>% ggplot() + 
+  geom_hline(yintercept = 0, colour = "darkgrey") +
+  geom_jitter(aes(as.factor(rustle), hb_ratio), width = 0.1, alpha = 0.2) +
+  geom_boxplot(aes(as.factor(rustle), hb_ratio, fill = as.factor(rustle)), alpha = 0.7,
+               outlier.shape=NA) +
+  stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
+  scale_colour_viridis_d(option = "plasma") + 
+  scale_fill_viridis_d(option = "plasma") +
+  labs(x = "Other mechanical score", y = paste0("Herring band ", index_type, " ratio")) +
+  ggsidekick::theme_sleek() + theme(legend.position = "none")
+
+ggsave(paste0("figs/rustle-in-herring-band-ratio-", index_type, ".png"), width = 4, height = 3)
+
+gb <- gb + theme(axis.title.y = element_blank()) 
+gw <- gw + theme(axis.title.y = element_blank() , axis.text.y = element_blank()) 
+gi <- gi + theme(axis.title.y = element_blank() , axis.text.y = element_blank())
+gr <- gr + theme(axis.title.y = element_blank())
+
+gg <- grid.arrange(gb, gw, gr, gi, 
+                   nrow = 2,
+                   left = "Herring band ACI ratio"
+)
+
+ggsave(paste0("figs/herring-band-ratio-", index_type, "-other-sounds.png"), 
+       plot=gg, width = 7, height = 7)
 
 
 stat.test <- hb %>% group_by(group) %>% wilcox_test(hb_ratio ~ herring.f, 
@@ -1124,12 +1415,19 @@ hb %>% ggplot() +
 ggsave(paste0("figs/herring-band-ratio-", index_type, "2.png"), width = 4, height = 4)
 
 
+
+
+
+### effects of boat and site
+
 stat.test <- hb %>% group_by(site) %>% wilcox_test(hb_ratio ~ herring.f, 
                                                    alternative = "less", 
                                                    ref.group = "0") %>% 
-  add_xy_position(x = "herring.f") %>% filter(p.adj.signif!="ns")
+  add_xy_position(x = "herring.f")  %>% 
+  mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.05, y.position)) %>% 
+  filter(p.adj.signif!="ns")
 
-hb %>% ggplot() + 
+g1 <- hb %>% ggplot() + 
   facet_wrap(~site)+ 
   geom_hline(yintercept = 0, colour = "darkgrey") +
   geom_jitter(aes(as.factor(herring.f), hb_ratio#, colour = as.factor(herring.f)
@@ -1142,7 +1440,7 @@ hb %>% ggplot() +
   labs(x = "Herring score", y = paste0("Herring band ", index_type, " ratio")) +
   ggsidekick::theme_sleek() + theme(legend.position = "none")
 
-ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-site.png"), width = 6, height = 3)
+ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-site.png"), width = 5.5, height = 3.5)
 
 
 
@@ -1152,7 +1450,7 @@ stat.test <- hb %>% group_by(boat_group) %>% wilcox_test(hb_ratio ~ herring.f,
                                                          ref.group = "0") %>% 
   add_xy_position(x = "herring.f") %>% filter(p.adj.signif!="ns")
 
-hb %>%
+g2 <- hb %>%
   ggplot() + 
   facet_wrap(~boat_group)+ 
   geom_hline(yintercept = 0, colour = "darkgrey") +
@@ -1166,9 +1464,20 @@ hb %>%
   labs(x = "Herring score", y = paste0("Herring band ", index_type, " ratio")) +
   ggsidekick::theme_sleek() + theme(legend.position = "none")
 
-ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-boat.png"), width = 6, height = 3)
+ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-boat.png"), width = 5.5, height = 3.5)
 
+g1 <- g1 + theme(axis.title = element_blank())
+g2 <- g2 + theme(axis.title = element_blank())
 
+# g1/g2 + patchwork::plot_layout()
+gg <- grid.arrange(g1, g2,
+             nrow = 2,
+             # heights = c(1.1,1),
+             left = "Herring band ACI ratio",
+             bottom = "Herring score"
+)
+
+ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-boat-and-site.png"), plot=gg, width = 6, height = 7)
 
 
 # For FCP focus on just one site
