@@ -713,30 +713,13 @@ hb <- bind_rows(hb_ratio_gt2, hb_ratio_lt2)
 
 hb$group <- 1
 
-# 
-# 
-# stat.test <- hb %>% group_by(boat_group) %>% wilcox_test(hb_ratio ~ herring.f, 
-#                                                          alternative = "less", 
-#                                                          ref.group = "0") %>% 
-#   add_xy_position(x = "herring.f") %>% filter(p.adj.signif!="ns")
-# 
-# g2 <- hb %>%
-#   ggplot() + 
-#   facet_wrap(~boat_group)+ 
-#   geom_hline(yintercept = 0, colour = "darkgrey") +
-#   geom_jitter(aes(as.factor(herring.f),hb_ratio#, colour = as.factor(herring.f)
-#   ), width = 0.1, alpha = 0.2) +
-#   geom_boxplot(aes(as.factor(herring.f), hb_ratio, fill = as.factor(herring.f)), alpha = 0.7,
-#                outlier.shape=NA) +
-#   stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
-#   scale_colour_viridis_d(option = "plasma") + 
-#   scale_fill_viridis_d(option = "plasma") +
-#   labs(x = "Herring score", y = paste0("Herring band ", index_type, " ratio")) +
-#   ggsidekick::theme_sleek() + theme(legend.position = "none")
+hb %>% group_by(site) %>% summarise(n = n())
+hb %>% group_by(site, herring.f) %>% summarise(n = n())
+hb %>% group_by(site, Pinnipeds) %>% summarise(n = n())
+hb %>% group_by(site, Birds) %>% summarise(n = n())
 
-# ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-boat.png"), width = 5.5, height = 3.5)
-
-
+## calculate false pos and neg rates
+## there must be a better way, but this worked for now
 
 hb %>% mutate(pos_ratio = ifelse(hb_ratio > 0, 1, 0)) %>% group_by(herring.f, pos_ratio) %>% summarise(n = n())
 
@@ -749,9 +732,9 @@ hb %>% mutate(pos_ratio = ifelse(hb_ratio > 0, 1, 0)) %>% group_by(herring.f, po
 # 7         3         1     7
 
 # 13 false negatives
-47 + 7 # 54 true positives
-86 # 137 false positives
-306  # 387 true negatives
+47 + 7 # 54 true positives ACI, 58 for RPS
+86 # false positives, 174 for RPS
+306  # 306 true negatives for ACI, 306 for RPS
 
 hb %>% group_by(herring.f) %>% summarise(n = n())
 # # A tibble: 4 × 2
@@ -784,12 +767,12 @@ hb %>% mutate(pos_ratio = ifelse(hb_ratio > 0, 1, 0)) %>%
 # 6         2         1    44
 # 7         3         1     7
 
-# 9 false negatives
-44 + 7 # true positives
-20 #+ 35 # false positives
-122 # true negatives
+# 9 false negatives for ACI, 6 for RPS
+44 + 7 # true positives, 54 for RPS
+20 # false positives, 57 for RPS
+122 # true negatives, 85 for RPS
 
-hb %>% group_by(herring.f) %>%   filter(boat != 3) %>% summarise(n = n())
+hb %>% group_by(herring.f) %>% filter(boat != 3) %>% summarise(n = n())
 # # A tibble: 4 × 2
 # herring.f     n
 # <dbl> <int>
@@ -800,18 +783,19 @@ hb %>% group_by(herring.f) %>%   filter(boat != 3) %>% summarise(n = n())
 
 
 # false positive rate (false positives/true negatives)
-20/142
+20/142 # for ACI
+57/85 # for RPS
 
 # false negative rate (false negative/true positives)
-9/(53 + 7)
+9/(53 + 7) # for ACI
+6/54 #for RPS
+
 
 
 
 
 
 # start with exploring high band (aka. ratio denominator) ----
-
-
 
 # boat
 stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ boat, 
@@ -1261,7 +1245,7 @@ gd <- gd + theme(axis.title.y = element_blank(),
 
 ggallhb <- grid.arrange(gh,gb, gw, gi, gr, gp, gg, gd,
                           ncol = 2,
-                          left = paste0("Herring band (2.6 – 3.2 kHz) ", index_type, "")
+                          left = paste0("Herring band (2.7 - 3.1 kHz) ", index_type, "")
 )
 
 ggsave(paste0("figs/herring-band-", index_type, "-all-other-sounds.png"), 
