@@ -174,8 +174,28 @@ unique(dat$freq_bin_num)
 dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
 # unique(dat$kHz)
 
+# p <- dat %>% filter(samp.tot.sec == 60) %>%
+#   # filter(boat < 2) %>% 
+#   # group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
+#   ggplot(aes(kHz, score,
+#              fill = as.factor(herring.hs),
+#              colour = as.factor(herring.hs)
+#   )) +
+#   # geom_point(alpha = 0.1) +
+#   geom_smooth() +
+#   facet_wrap(~index_type, scales = "free", ncol = 3) +
+#   # scale_x_continuous(trans = "sqrt") +
+#   scale_fill_viridis_d(option = "plasma") +
+#   scale_colour_viridis_d(option = "plasma") +
+#   labs(y = "Acoustic Index Score", 
+#     colour = "Herring score", 
+#     fill = "Herring score") +
+#   theme_sleek() 
+# p <- p + theme(legend.position = c(0.8,0.07))
+#  
+# ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-all.png"), width = 7, height = 8)
 
-p <- dat %>% filter(samp.tot.sec == 60) %>%
+(p <- dat %>% filter(samp.tot.sec == 60) %>%
   filter(index_type %in% c("ACI", "BGN", "RPS")) %>%
   # filter(boat < 2) %>% 
   # group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
@@ -189,11 +209,13 @@ p <- dat %>% filter(samp.tot.sec == 60) %>%
   # scale_x_continuous(trans = "sqrt") +
   scale_fill_viridis_d(option = "plasma") +
   scale_colour_viridis_d(option = "plasma") +
-  ylab("Acoustic Index Score") +
-  theme_sleek()
+  labs(y = "Acoustic Index Score", 
+      colour = "Herring score", 
+      fill = "Herring score") +
+  theme_sleek())
 
-# # ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-all.pdf"), width = 8, height = 5)
 ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-subset2.png"), width = 10, height = 2.5)
+
 
 # # now focus on just one site
 # 
