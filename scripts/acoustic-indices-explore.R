@@ -76,7 +76,7 @@ boat.col<-data.frame(boat=unique(d$boat))%>%
   arrange(boat)%>% 
   # mutate(boat.index=viridis::viridis(3, begin = 0.25, end=1))
   # mutate(boat.index=viridis::mako(3, begin = 0.25, end=1))
-  mutate(boat.index=viridis::plasma(3,begin = 0.2, end=0.7))
+  mutate(boat.index=viridis::plasma(3,begin = 0.25, end=1))
 
 waves.col<-data.frame(waves=unique(d$waves))%>%
   arrange(waves)%>%
@@ -215,414 +215,6 @@ dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
   theme_sleek())
 
 ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-subset2.png"), width = 10, height = 2.5)
-
-
-# # now focus on just one site
-# 
-# dat <- dat %>% filter(site_file == site_file_name)
-# unique(dat$site_file)
-# unique(dat$site)
-# dat %>% filter(samp.tot.sec == 60) %>%
-#   # group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
-#   ggplot(aes(kHz, score,
-#              fill = as.factor(herring.hs),
-#              colour = as.factor(herring.hs)
-#   )) +
-#   # geom_point(alpha = 0.5) +
-#   geom_smooth() +
-#   facet_wrap(~index_type, scales = "free") +
-#   # scale_x_continuous(trans = "sqrt") +
-#   scale_fill_viridis_d() +
-#   scale_colour_viridis_d() +
-#   ylab("Acoustic Index Score") +
-#   theme_sleek()
-# 
-# ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
-# 
-# plot_single_index <- function(data,
-# index) {
-#   data %>%
-#     filter(index_type == {{ index }}) %>%
-#     # filter pulse at start of each file and high and low bands that distract
-#     filter(minintofile != 0 & kHz > 0.1 & kHz < 10.5) %>%
-#     ggplot(aes(plot_time, kHz, colour = score, fill = score)) +
-#     # geom_tile() +
-#     geom_raster() +
-#     scale_colour_viridis_c(option = "turbo") +
-#     scale_fill_viridis_c(option = "turbo") +
-#     coord_cartesian(expand = FALSE) +
-#     theme_sleek() +
-#     theme(
-#       axis.title.x = element_blank(),
-#       panel.background = element_rect(fill = "black")
-#     ) +
-#     ggtitle(paste0(data$site[1]), subtitle = index)
-# }
-# 
-# g <- plot_single_index(dat, "ACI")
-# # most promising
-# g <- plot_single_index(dat, "BGN")
-# # promising
-# g <- plot_single_index(dat, "CVR")
-# g <- plot_single_index(dat, "ENT")
-# g <- plot_single_index(dat, "EVN")
-# # maybe useful
-# g <- plot_single_index(dat, "PMN")
-# 
-# # looks promising
-# g <- plot_single_index(dat, "OSC")
-# g <- plot_single_index(dat, "RHZ")
-# g <- plot_single_index(dat, "RNG")
-# g <- plot_single_index(dat, "RPS")
-# g <- plot_single_index(dat, "RVT")
-# g <- plot_single_index(dat, "SPT")
-# 
-# (g + geom_point(
-#   data = filter(dat, index_type == "ACI" & herring.hs == 1),
-#   aes(plot_time,
-#     y = 10 # , alpha = herring.hs
-#   ),
-#   # colour = "black",
-#   colour = "white",
-#   inherit.aes = F, size = 2, shape = "|"
-# ))
-
-false_colour_plot <- function(indices,
-                              data = data) {
-  .d <- data %>%
-    filter(index_type %in% indices) %>%
-    group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
-    ungroup() %>%
-    pivot_wider(names_from = "index_type", values_from = "score")
-  # browser()
-  # .d[!complete.cases(.d),] #Returns zero rows, no pixel is lacking any data
-
-  r1 <- range(.d[[indices[1]]])
-  r2 <- range(.d[[indices[2]]])
-  r3 <- range(.d[[indices[3]]])
-  # # Values must be btw 0-1
-  
-  .d$r <- .d[[indices[1]]] 
-  .d$g <- .d[[indices[2]]] 
-  .d$b <- .d[[indices[3]]] 
-
-  ggplot(
-    data = filter(.d, minintofile != 0 & kHz > 0.1 & kHz < 10.5),
-    aes(plot_time, kHz, fill = rgb(r, g, b, maxColorValue = 1))
-  ) +
-    geom_raster() +
-    scale_colour_identity() +
-    scale_fill_identity() +
-    scale_x_datetime(breaks = scales::pretty_breaks(n = 12)) +
-    coord_cartesian(expand = FALSE) +
-    theme_sleek() +
-    theme(
-      axis.title.x = element_blank(),
-      panel.background = element_rect(fill = "black")
-    ) +
-    ggtitle(paste0(
-      .d$site[1]
-      #, "\n red = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]), 
-      # subtitle = paste0(
-      # .d$site[1]
-      # ,"\nbars at top indicate samples with herring calls (pale blue = 1 min resolution; grey = 15 min resolution; white = herring sounds dominate > 10% of time)\n", 
-      # ,"red = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]
-      )
-      )
-}
-
-add_herring_to_FCP <- function(FCP, 
-                               data = data){
-  
-  .dat1 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 60)
-  .dat2 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 900)
-  g <- FCP
-  if(max(.dat1$herring.hs, na.rm = T) > 0) {
-    g <- g + geom_point(
-  data = filter(.dat1,  herring.hs %in% c(1,2)),
-  aes(plot_time, y = 10#, alpha = herring.hs
-  ),
-  colour = "lightblue",
-  inherit.aes = F, size = 2, shape = "|"
-) 
-  }
-  if(max(.dat2$herring.hs, na.rm = T) > 0) {
-    g <- g + geom_point(
-  data = filter(.dat2, herring.hs %in% c(1)),
-  aes(plot_time, y = 10 # , alpha = herring.hs
-  ),
-  colour = "grey50",
-  inherit.aes = F, size = 2, shape = "|"
-) 
-  }
-  
-  if(max(.dat1$herring.hs, na.rm = T) > 2) {
-  g <- g + geom_point(
-  data = filter(.dat1, herring.hs > 2),
-  aes(plot_time, y = 10
-  ),
-  colour = "white",
-  inherit.aes = F, size = 2, shape = "|"
-  ) 
-  }
-  
-  if(2 %in% unique(.dat2$herring.hs)) {
-  g <- g + geom_point(
-  data = filter(.dat2, herring.hs == 2),
-  aes(plot_time, y = 10 
-  ),
-  colour = "grey70",
-  inherit.aes = F, size = 2, shape = "|"
-  ) }
-  
-  if(max(.dat2$herring.hs, na.rm = T) > 2) {
-    g <- g + geom_point(
-  data = filter(.dat2, herring.hs > 2),
-  aes(plot_time, y = 10 
-  ),
-  colour = "white",
-  inherit.aes = F, size = 2, shape = "|"
-  )
-  }
-  g <- g + ggtitle(paste0(.dat1$site[1]),
-    subtitle = paste0("bars at top indicate samples with herring calls (pale blue = 1 min resolution; grey = 15 min resolution; white = herring sounds dominate > 10% of time)\nred = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]))
-  ggsave(paste0(figure_directory, "false-colour-spectrogram-", paste(indices, collapse = "-"), "-", site_file_name, ".png"), 
-         width = 12, height = 3)
-}
-
-add_variable_to_FCP <- function(FCP, 
-                                var = "herring.hs", 
-                                indices = c("ENT", "EVN", "ACI"), 
-                                data = data){
-  
-  .dat1 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 60)
-  .dat2 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 900)
-  g <- FCP
-  if(max(.dat1[var], na.rm = T) > 0) {
-    g <- g + geom_point(
-      data = filter(.dat1, .data[[var]] %in% c(1,2,3)),
-      aes(plot_time, y = 10#, alpha = {{var}}
-      ),
-      colour = "lightblue",
-      inherit.aes = F, size = 2, shape = "|"
-    ) 
-  }
-  if(max(.dat2[var], na.rm = T) > 0) {
-    g <- g + geom_point(
-      data = filter(.dat2, .data[[var]] %in% c(1,2,3)),
-      aes(plot_time, y = 10 # , alpha = {{var}}
-      ),
-      colour = "grey50",
-      inherit.aes = F, size = 2, shape = "|"
-    ) 
-  }
-  
-  if(max(.dat1[var], na.rm = T) > 2) {
-    g <- g + geom_point(
-      data = filter(.dat1, .data[[var]] > 2),
-      aes(plot_time, y = 10
-      ),
-      colour = "white",
-      inherit.aes = F, size = 2, shape = "|"
-    ) 
-  }
-  
-  if(2 %in% unique(.dat2[var])) {
-    g <- g + geom_point(
-      data = filter(.dat2, .data[[var]] == 2),
-      aes(plot_time, y = 10 
-      ),
-      colour = "grey70",
-      inherit.aes = F, size = 2, shape = "|"
-    ) }
-  
-  if(max(.dat2[var], na.rm = T) > 2) {
-    g <- g + geom_point(
-      data = filter(.dat2, .data[[var]] > 2),
-      aes(plot_time, y = 10 
-      ),
-      colour = "white",
-      inherit.aes = F, size = 2, shape = "|"
-    )
-  }  
-  g <- g + ggtitle(paste0(.dat1$site[1]), 
-    subtitle = paste0("bars at top indicate samples with ", var, 
-                      " (pale blue = 1 min resolution; grey = 15 min resolution; white = ", var, 
-                      " dominate > 10% of time)\nred = ", indices[1], 
-                      ", green = ", indices[2], ", blue = ", indices[3]))
-  
-  ggsave(paste0(figure_directory, "false-colour-spectrogram-", 
-                paste(indices, collapse = "-"), "-", 
-                site_file_name, "-", var, ".png"), 
-         width = 12, height = 3)
-  
-}
-
-add_var_bars_to_FCP <- function(FCP, indices, 
-                                var_dat = d3, 
-                                data = data){
-  
-  .dat1 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 60)
-  .dat2 <- filter(dat, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 900)
-  
-  g <- FCP + theme(axis.title.y = element_text(vjust = -5))
-  
-  g2 <- var_dat %>% filter(site == .dat1$site[1]) %>% ggplot(aes(x=plot_time,y=1,fill=colors))+
-    geom_tile(width = 1000)+
-    scale_fill_identity()+
-    facet_wrap(~Index, nrow =3, switch = "y")+
-    coord_cartesian(expand = F) + 
-    # ggtitle(paste0(.dat1$site[1]) +
-    theme_sleek() +
-    theme(panel.background = element_rect(fill = "black"),
-      strip.background = element_blank(),
-      strip.text.y.left = element_text(angle = 0),
-      strip.placement = "outside",
-      axis.text = element_blank(),
-      axis.title = element_blank(),
-      axis.ticks =element_blank())
-  
-  # g <- g + ggtitle(paste0(.dat1$site[1])
-  #                  # , subtitle = paste0("bars at top indicate samples with ", var, 
-  #                  #                   " (pale blue = 1 min resolution; grey = 15 min resolution; white = ", var, 
-  #                  #                   " dominate > 10% of time)\nred = ", indices[1], 
-  #                  #                   ", green = ", indices[2], ", blue = ", indices[3])
-  #                  )
-  # browser()
-  g /g2 + plot_layout(heights = c(3,1.2))
-  
-  ggsave(paste0(figure_directory, "false-colour-spectrogram-", 
-                paste(indices, collapse = "-"), "-", 
-                site_file_name, "2.png"), 
-         width = 10, height = 3)
-  
-}
-
-
-
-
-### Correlations between indices 
-# # unique(dat$index_type)
-# # # "ACI"
-# # # "BGN": range is all negative so must take absolute value first?
-# # # "CVR" "DIF" "ENT" "EVN" "OSC" "PMN" "RHZ" "RNG" "RPS" "RVT" "SPT" "SUM"
-# d1 <- dat %>% filter(samp.tot.sec == 60) %>%
-#   filter(index_type %in% c("ACI", "BGN", "CVR", "OSC", "ENT", "EVN", "PMN","RHZ", "RNG", "RPS", "RVT", "SPT", "SUM")) %>%
-#   select(plot_time, kHz, index_type, score, herring.hs, gull, pinniped, rustling, waves, boat) %>%
-#   pivot_wider(names_from = "index_type", values_from = "score") %>%
-#   select(-plot_time, -kHz)
-# 
-# c1 <- cor(d1)
-# c1
-# 
-# library(psych)
-# corPlot(d1, cex = 1.2)
-# # 
-# # Denman: 
-# # BGN still most negative
-# # ENT and ACI similarly most positive
-# # no others seem very interesting
-# 
-# # d1 <- dat %>%
-# #   filter(index_type %in% c("ACI", "BGN", "CVR", "OSC", "ENT", "EVN", "PMN","RHZ", "RNG", "RPS", "RVT", "SPT", "SUM")) %>%
-# #   select(plot_time, kHz, index_type, score, herring.hs, gull, pinniped, rustling, waves, boat) %>%
-# #   pivot_wider(names_from = "index_type", values_from = "score") %>%
-# #   select(-plot_time, -kHz)
-# # 
-# # c1 <- cor(d1)
-# # c1
-# # 
-# # library(psych)
-# # corPlot(d1, cex = 1.2)
-# 
-# # with 1 and 15 min resolutions
-# # NeckPT: 
-# # ENT most positive, BGN most negative and least correlated with each other, OSC also possibly interesting
-# # OSC and RHZ least correlated with ENT, of the two OSC more correlated with herring
-# # ACI an PMN least correlated with BGN and herring
-# # 
-# # Denman: 
-# # BGN still most negative
-# # ENT and ACI similarly most positive
-# # no others seem very interesting
-# # 
-# # Collishaw:
-# # ENT and ACI most positive, BGN most negative
-# # no others seem very interesting
-# # RVT, ACI and OSC all pretty correlated with waves  
-# 
-# 
-# 
-
-
-# save plots density differences with herring for summary index values
-d2 %>% filter(samp.tot.sec == 60) %>% ggplot(aes(score,
-                                                 fill = as.factor(herring.hs),
-                                                 colour = as.factor(herring.hs)
-)) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~index_type, scales = "free") +
-  scale_fill_viridis_d() +
-  scale_colour_viridis_d() +
-  theme_sleek()
-
-ggsave(paste0(figure_directory, "density-summary-index-values-all-sites.pdf"), width = 12, height = 8)
-
-
-# save plots of density differences with herring for summary index values for one site
-
-d2 %>% filter(samp.tot.sec == 60) %>% 
-  filter(site == dat$site[1]) %>%
-  ggplot(aes(score,
-             fill = as.factor(herring.hs),
-             colour = as.factor(herring.hs)
-  )) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~index_type, scales = "free") +
-  scale_fill_viridis_d() +
-  scale_colour_viridis_d() +
-  theme_sleek()
-
-ggsave(paste0(figure_directory, "density-summary-index-values-", site_file_name, ".pdf"), width = 12, height = 8)
-
-
-# save plots of density differences with herring at the frequency level
-# against 1min annotations
-dat %>% filter(samp.tot.sec == 60) %>% 
-  group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
-  ggplot(aes(score,
-             fill = as.factor(herring.hs),
-             colour = as.factor(herring.hs)
-  )) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~index_type, scales = "free") +
-  scale_x_continuous(trans = "sqrt") +
-  scale_fill_viridis_d() +
-  scale_colour_viridis_d() +
-  theme_sleek()
-
-ggsave(paste0(figure_directory, "density-freq-level-1min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
-
-
-# against 15 min annotations
-dat %>% filter(samp.tot.sec == 900) %>% 
-  group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
-  ggplot(aes(score,
-             fill = as.factor(herring.hs),
-             colour = as.factor(herring.hs)
-  )) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~index_type, scales = "free") +
-  scale_x_continuous(trans = "sqrt") +
-  scale_fill_viridis_d() +
-  scale_colour_viridis_d() +
-  theme_sleek()
-
-ggsave(paste0(figure_directory, "density-freq-level-15min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
-
-
-
-
 
 
 
@@ -1294,8 +886,10 @@ gr <- hb %>% ggplot() +
   stat_pvalue_manual(stat.test2, label = "p.adj.signif", tip.length = 0.01)+
   scale_colour_viridis_d(option = "plasma") + 
   scale_fill_viridis_d(option = "plasma") +
-  labs(x ="Other mechanical score", y = paste0("Herring band ", index_type, " ratio")) +
-  ggsidekick::theme_sleek() + theme(legend.position = "none")
+  labs(x ="Other mechanical score", y = paste0("Herring band ", index_type, " ratio"), colour = "Score", fill = "Score") +
+  ggsidekick::theme_sleek() + 
+  # theme(legend.position = c(0.2,0.8))
+  theme(legend.position = "none")
 
 ggsave(paste0("figs/herring-band-ratio-", index_type, "-rustle.png"), width = 6, height = 3)
 
@@ -1315,8 +909,8 @@ gb <- hb %>% ggplot() +
   geom_boxplot(aes(as.factor(boat), hb_ratio, fill = as.factor(boat)), alpha = 0.7,
                outlier.shape=NA) +
   stat_pvalue_manual(stat.test, label = "p.adj.signif", tip.length = 0.01)+
-  scale_colour_viridis_d(option = "plasma") + 
-  scale_fill_viridis_d(option = "plasma") +
+  scale_colour_viridis_d(option = "plasma", begin = 0.25) + 
+  scale_fill_viridis_d(option = "plasma", begin = 0.25) +
   labs(x = "Boat score", y = paste0("Herring band ", index_type, " ratio")) +
   ggsidekick::theme_sleek() + theme(legend.position = "none")
 
@@ -1399,7 +993,17 @@ gg <- grid.arrange(gb, gw, gr, gi,
 ggsave(paste0("figs/herring-band-ratio-", index_type, "-other-sounds.png"), 
        plot=gg, width = 7, height = 7)
 
+# extract legend for use with annotation bars
 
+gb2 <- gb + labs(colour = "Score", fill = "Score") + 
+  theme(legend.position = "right")
+
+score_legend <- ggpubr::get_legend(gb2)
+as_ggplot(score_legend)
+
+
+
+# just herring box plots
 stat.test <- hb %>% group_by(group) %>% wilcox_test(hb_ratio ~ herring.f, 
                                                     alternative = "less", 
                                                     ref.group = "0") %>% 
@@ -1486,11 +1090,302 @@ gg <- grid.arrange(g1, g2,
 ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-boat-and-site.png"), plot=gg, width = 6, height = 7)
 
 
+
+# FALSE COLOUR SPECTROGRAM ------
+
 # For FCP focus on just one site
 
-data <- dat %>% filter(site_file == site_file_name)
+dat1 <- dat %>% filter(site_file == site_file_name)
 unique(data$site_file)
 unique(data$site)
+
+
+
+# # now focus on just one site
+# 
+# dat <- dat %>% filter(site_file == site_file_name)
+# unique(dat$site_file)
+# unique(dat$site)
+# dat %>% filter(samp.tot.sec == 60) %>%
+#   # group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
+#   ggplot(aes(kHz, score,
+#              fill = as.factor(herring.hs),
+#              colour = as.factor(herring.hs)
+#   )) +
+#   # geom_point(alpha = 0.5) +
+#   geom_smooth() +
+#   facet_wrap(~index_type, scales = "free") +
+#   # scale_x_continuous(trans = "sqrt") +
+#   scale_fill_viridis_d() +
+#   scale_colour_viridis_d() +
+#   ylab("Acoustic Index Score") +
+#   theme_sleek()
+# 
+# ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
+# 
+# plot_single_index <- function(data,
+# index) {
+#   data %>%
+#     filter(index_type == {{ index }}) %>%
+#     # filter pulse at start of each file and high and low bands that distract
+#     filter(minintofile != 0 & kHz > 0.1 & kHz < 10.5) %>%
+#     ggplot(aes(plot_time, kHz, colour = score, fill = score)) +
+#     # geom_tile() +
+#     geom_raster() +
+#     scale_colour_viridis_c(option = "turbo") +
+#     scale_fill_viridis_c(option = "turbo") +
+#     coord_cartesian(expand = FALSE) +
+#     theme_sleek() +
+#     theme(
+#       axis.title.x = element_blank(),
+#       panel.background = element_rect(fill = "black")
+#     ) +
+#     ggtitle(paste0(data$site[1]), subtitle = index)
+# }
+# 
+# g <- plot_single_index(dat, "ACI")
+# # most promising
+# g <- plot_single_index(dat, "BGN")
+# # promising
+# g <- plot_single_index(dat, "CVR")
+# g <- plot_single_index(dat, "ENT")
+# g <- plot_single_index(dat, "EVN")
+# # maybe useful
+# g <- plot_single_index(dat, "PMN")
+# 
+# # looks promising
+# g <- plot_single_index(dat, "OSC")
+# g <- plot_single_index(dat, "RHZ")
+# g <- plot_single_index(dat, "RNG")
+# g <- plot_single_index(dat, "RPS")
+# g <- plot_single_index(dat, "RVT")
+# g <- plot_single_index(dat, "SPT")
+# 
+# (g + geom_point(
+#   data = filter(dat, index_type == "ACI" & herring.hs == 1),
+#   aes(plot_time,
+#     y = 10 # , alpha = herring.hs
+#   ),
+#   # colour = "black",
+#   colour = "white",
+#   inherit.aes = F, size = 2, shape = "|"
+# ))
+
+false_colour_plot <- function(indices,
+                              data = dat1) {
+  # browser()
+  .d <- data %>%
+    filter(index_type %in% indices) %>%
+    group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
+    ungroup() %>%
+    pivot_wider(names_from = "index_type", values_from = "score")
+  # browser()
+  # .d[!complete.cases(.d),] #Returns zero rows, no pixel is lacking any data
+  # browser()
+  r1 <- range(.d[[indices[1]]])
+  r2 <- range(.d[[indices[2]]])
+  r3 <- range(.d[[indices[3]]])
+  # # Values must be btw 0-1
+  
+  .d$r <- .d[[indices[1]]] 
+  .d$g <- .d[[indices[2]]] 
+  .d$b <- .d[[indices[3]]] 
+  
+  ggplot(
+    data = filter(.d, minintofile != 0 & kHz > 0.1 & kHz < 10.5),
+    aes(plot_time, kHz, fill = rgb(r, g, b, maxColorValue = 1))
+  ) +
+    geom_raster() +
+    scale_colour_identity() +
+    scale_fill_identity() +
+    scale_x_datetime(breaks = scales::pretty_breaks(n = 12)) +
+    coord_cartesian(expand = FALSE) +
+    theme_sleek() +
+    theme(
+      axis.title.x = element_blank(),
+      panel.background = element_rect(fill = "black")
+    ) +
+    ggtitle(paste0(
+      .d$site[1]
+      #, "\n red = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]), 
+      # subtitle = paste0(
+      # .d$site[1]
+      # ,"\nbars at top indicate samples with herring calls (pale blue = 1 min resolution; grey = 15 min resolution; white = herring sounds dominate > 10% of time)\n", 
+      # ,"red = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]
+    )
+    )
+}
+
+add_herring_to_FCP <- function(FCP, 
+                               data = dat1){
+  
+  .dat1 <- filter(data, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 60)
+  .dat2 <- filter(data, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 900)
+  g <- FCP
+  if(max(.dat1$herring.hs, na.rm = T) > 0) {
+    g <- g + geom_point(
+      data = filter(.dat1,  herring.hs %in% c(1,2)),
+      aes(plot_time, y = 10#, alpha = herring.hs
+      ),
+      colour = "lightblue",
+      inherit.aes = F, size = 2, shape = "|"
+    ) 
+  }
+  if(max(.dat2$herring.hs, na.rm = T) > 0) {
+    g <- g + geom_point(
+      data = filter(.dat2, herring.hs %in% c(1)),
+      aes(plot_time, y = 10 # , alpha = herring.hs
+      ),
+      colour = "grey50",
+      inherit.aes = F, size = 2, shape = "|"
+    ) 
+  }
+  
+  if(max(.dat1$herring.hs, na.rm = T) > 2) {
+    g <- g + geom_point(
+      data = filter(.dat1, herring.hs > 2),
+      aes(plot_time, y = 10
+      ),
+      colour = "white",
+      inherit.aes = F, size = 2, shape = "|"
+    ) 
+  }
+  
+  if(2 %in% unique(.dat2$herring.hs)) {
+    g <- g + geom_point(
+      data = filter(.dat2, herring.hs == 2),
+      aes(plot_time, y = 10 
+      ),
+      colour = "grey70",
+      inherit.aes = F, size = 2, shape = "|"
+    ) }
+  
+  if(max(.dat2$herring.hs, na.rm = T) > 2) {
+    g <- g + geom_point(
+      data = filter(.dat2, herring.hs > 2),
+      aes(plot_time, y = 10 
+      ),
+      colour = "white",
+      inherit.aes = F, size = 2, shape = "|"
+    )
+  }
+  g <- g + ggtitle(paste0(.dat1$site[1]),
+                   subtitle = paste0("bars at top indicate samples with herring calls (pale blue = 1 min resolution; grey = 15 min resolution; white = herring sounds dominate > 10% of time)\nred = ", indices[1], ", green = ", indices[2], ", blue = ", indices[3]))
+  ggsave(paste0(figure_directory, "false-colour-spectrogram-", paste(indices, collapse = "-"), "-", site_file_name, ".png"), 
+         width = 12, height = 3)
+}
+
+add_variable_to_FCP <- function(FCP, 
+                                var = "herring.hs", 
+                                indices = c("ENT", "EVN", "ACI"), 
+                                data = dat1){
+  
+  .dat1 <- filter(data, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 60)
+  .dat2 <- filter(data, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 900)
+  g <- FCP
+  if(max(.dat1[var], na.rm = T) > 0) {
+    g <- g + geom_point(
+      data = filter(.dat1, .data[[var]] %in% c(1,2,3)),
+      aes(plot_time, y = 10#, alpha = {{var}}
+      ),
+      colour = "lightblue",
+      inherit.aes = F, size = 2, shape = "|"
+    ) 
+  }
+  if(max(.dat2[var], na.rm = T) > 0) {
+    g <- g + geom_point(
+      data = filter(.dat2, .data[[var]] %in% c(1,2,3)),
+      aes(plot_time, y = 10 # , alpha = {{var}}
+      ),
+      colour = "grey50",
+      inherit.aes = F, size = 2, shape = "|"
+    ) 
+  }
+  
+  if(max(.dat1[var], na.rm = T) > 2) {
+    g <- g + geom_point(
+      data = filter(.dat1, .data[[var]] > 2),
+      aes(plot_time, y = 10
+      ),
+      colour = "white",
+      inherit.aes = F, size = 2, shape = "|"
+    ) 
+  }
+  
+  if(2 %in% unique(.dat2[var])) {
+    g <- g + geom_point(
+      data = filter(.dat2, .data[[var]] == 2),
+      aes(plot_time, y = 10 
+      ),
+      colour = "grey70",
+      inherit.aes = F, size = 2, shape = "|"
+    ) }
+  
+  if(max(.dat2[var], na.rm = T) > 2) {
+    g <- g + geom_point(
+      data = filter(.dat2, .data[[var]] > 2),
+      aes(plot_time, y = 10 
+      ),
+      colour = "white",
+      inherit.aes = F, size = 2, shape = "|"
+    )
+  }  
+  g <- g + ggtitle(paste0(.dat1$site[1]), 
+                   subtitle = paste0("bars at top indicate samples with ", var, 
+                                     " (pale blue = 1 min resolution; grey = 15 min resolution; white = ", var, 
+                                     " dominate > 10% of time)\nred = ", indices[1], 
+                                     ", green = ", indices[2], ", blue = ", indices[3]))
+  
+  ggsave(paste0(figure_directory, "false-colour-spectrogram-", 
+                paste(indices, collapse = "-"), "-", 
+                site_file_name, "-", var, ".png"), 
+         width = 12, height = 3)
+  
+}
+
+add_var_bars_to_FCP <- function(FCP, indices, 
+                                var_dat = d3, 
+                                data = dat1){
+  
+  .dat1 <- filter(data, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 60)
+  .dat2 <- filter(data, minintofile != 0 & index_type == "ACI" & samp.tot.sec == 900)
+  
+  g <- FCP + theme(axis.title.y = element_text(vjust = -5))
+  
+  g2 <- var_dat %>% filter(site == .dat1$site[1]) %>% 
+    ggplot(aes(x=plot_time,y=1,fill=colors))+
+    geom_tile(width = 1000)+
+    scale_fill_identity()+
+    facet_wrap(~Index, nrow =3, switch = "y")+
+    coord_cartesian(expand = F) + 
+    # ggtitle(paste0(.dat1$site[1]) +
+    theme_sleek() +
+    theme(panel.background = element_rect(fill = "black"),
+          strip.background = element_blank(),
+          strip.text.y.left = element_text(angle = 0),
+          strip.placement = "outside",
+          axis.text = element_blank(),
+          axis.title = element_blank(),
+          axis.ticks =element_blank())
+  
+  # g <- g + ggtitle(paste0(.dat1$site[1])
+  #                  # , subtitle = paste0("bars at top indicate samples with ", var, 
+  #                  #                   " (pale blue = 1 min resolution; grey = 15 min resolution; white = ", var, 
+  #                  #                   " dominate > 10% of time)\nred = ", indices[1], 
+  #                  #                   ", green = ", indices[2], ", blue = ", indices[3])
+  #                  )
+  # browser()
+  g /g2 + plot_layout(heights = c(3,1.2))
+  
+  ggsave(paste0(figure_directory, "false-colour-spectrogram-", 
+                paste(indices, collapse = "-"), "-", 
+                site_file_name, "-w-bars.png"), 
+         width = 10, height = 3)
+  
+}
+
+
+
 
 
 # using vars with the strongest relationships with herring
@@ -1505,7 +1400,8 @@ unique(data$site)
 
 # narrowband denoise based on smooths
 list_indices <- list(
-  c("ACI", "BGN", "RPS")
+  c("ACI", "BGN", "RPS"
+    )
 )
 
 # 
@@ -1517,55 +1413,180 @@ list_indices <- list(
 
 for (i in list_indices){
   indices <- i
+  # browser()
   g <- false_colour_plot(indices) %>% add_var_bars_to_FCP(indices = indices)
 }
 
+# 
+# # what about trying the less dominant variables?
+# 
+# list_indices <- list(
+#   # c("BGN", "RVT", "ACI"), # collishaw inspired choices
+#   # c("BGN", "CVR", "RNG"),  # denman inspired choices
+#   c("BGN", "CVR", "ACI"),  # denman inspired choices
+#   c("BGN", "RNG", "ACI")  # denman inspired choices
+# )
+# for (i in list_indices){
+#   indices <- i
+#   g <- false_colour_plot(indices) %>% add_herring_to_FCP()
+# }
+# 
+# 
+# # explore some of the other annotation categories
+# list_indices <- list(
+#   c("ENT", "BGN", "ACI"),
+#   c("ENT", "BGN", "OSC")
+# )
+# for (i in list_indices){
+#   indices <- i
+#   g <- false_colour_plot(indices) %>% add_variable_to_FCP(var = "waves", indices = i)
+# }
+# 
+# list_indices <- list(
+#   c("ENT", "BGN", "ACI"),
+#   c("ENT", "BGN", "OSC"),
+#   c("BGN", "CVR", "ACI"),  # denman inspired choices
+#   c("BGN", "RNG", "ACI")
+# )
+# 
+# vars <- list(
+#   "rustling",
+#   "boat",
+#   "tonal",
+#   "pinniped"
+# )
+# 
+# 
+# for(j in vars){
+#   for (i in list_indices){
+#     indices <- i
+#     g <- false_colour_plot(indices) %>% add_variable_to_FCP(var = j, indices = i)
+#   }
+# }
+# 
+# 
 
-# what about trying the less dominant variables?
+### Correlations between indices 
+# # unique(dat$index_type)
+# # # "ACI"
+# # # "BGN": range is all negative so must take absolute value first?
+# # # "CVR" "DIF" "ENT" "EVN" "OSC" "PMN" "RHZ" "RNG" "RPS" "RVT" "SPT" "SUM"
+# d1 <- dat %>% filter(samp.tot.sec == 60) %>%
+#   filter(index_type %in% c("ACI", "BGN", "CVR", "OSC", "ENT", "EVN", "PMN","RHZ", "RNG", "RPS", "RVT", "SPT", "SUM")) %>%
+#   select(plot_time, kHz, index_type, score, herring.hs, gull, pinniped, rustling, waves, boat) %>%
+#   pivot_wider(names_from = "index_type", values_from = "score") %>%
+#   select(-plot_time, -kHz)
+# 
+# c1 <- cor(d1)
+# c1
+# 
+# library(psych)
+# corPlot(d1, cex = 1.2)
+# # 
+# # Denman: 
+# # BGN still most negative
+# # ENT and ACI similarly most positive
+# # no others seem very interesting
+# 
+# # d1 <- dat %>%
+# #   filter(index_type %in% c("ACI", "BGN", "CVR", "OSC", "ENT", "EVN", "PMN","RHZ", "RNG", "RPS", "RVT", "SPT", "SUM")) %>%
+# #   select(plot_time, kHz, index_type, score, herring.hs, gull, pinniped, rustling, waves, boat) %>%
+# #   pivot_wider(names_from = "index_type", values_from = "score") %>%
+# #   select(-plot_time, -kHz)
+# # 
+# # c1 <- cor(d1)
+# # c1
+# # 
+# # library(psych)
+# # corPlot(d1, cex = 1.2)
+# 
+# # with 1 and 15 min resolutions
+# # NeckPT: 
+# # ENT most positive, BGN most negative and least correlated with each other, OSC also possibly interesting
+# # OSC and RHZ least correlated with ENT, of the two OSC more correlated with herring
+# # ACI an PMN least correlated with BGN and herring
+# # 
+# # Denman: 
+# # BGN still most negative
+# # ENT and ACI similarly most positive
+# # no others seem very interesting
+# # 
+# # Collishaw:
+# # ENT and ACI most positive, BGN most negative
+# # no others seem very interesting
+# # RVT, ACI and OSC all pretty correlated with waves  
+# 
+# 
+# 
 
-list_indices <- list(
-  # c("BGN", "RVT", "ACI"), # collishaw inspired choices
-  # c("BGN", "CVR", "RNG"),  # denman inspired choices
-  c("BGN", "CVR", "ACI"),  # denman inspired choices
-  c("BGN", "RNG", "ACI")  # denman inspired choices
-)
-for (i in list_indices){
-  indices <- i
-  g <- false_colour_plot(indices) %>% add_herring_to_FCP()
-}
+
+# save plots density differences with herring for summary index values
+d2 %>% filter(samp.tot.sec == 60) %>% ggplot(aes(score,
+                                                 fill = as.factor(herring.hs),
+                                                 colour = as.factor(herring.hs)
+)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~index_type, scales = "free") +
+  scale_fill_viridis_d() +
+  scale_colour_viridis_d() +
+  theme_sleek()
+
+ggsave(paste0(figure_directory, "density-summary-index-values-all-sites.pdf"), width = 12, height = 8)
 
 
-# explore some of the other annotation categories
-list_indices <- list(
-  c("ENT", "BGN", "ACI"),
-  c("ENT", "BGN", "OSC")
-)
-for (i in list_indices){
-  indices <- i
-  g <- false_colour_plot(indices) %>% add_variable_to_FCP(var = "waves", indices = i)
-}
+# save plots of density differences with herring for summary index values for one site
 
-list_indices <- list(
-  c("ENT", "BGN", "ACI"),
-  c("ENT", "BGN", "OSC"),
-  c("BGN", "CVR", "ACI"),  # denman inspired choices
-  c("BGN", "RNG", "ACI")
-)
+d2 %>% filter(samp.tot.sec == 60) %>% 
+  filter(site == dat$site[1]) %>%
+  ggplot(aes(score,
+             fill = as.factor(herring.hs),
+             colour = as.factor(herring.hs)
+  )) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~index_type, scales = "free") +
+  scale_fill_viridis_d() +
+  scale_colour_viridis_d() +
+  theme_sleek()
 
-vars <- list(
-  "rustling",
-  "boat",
-  "tonal",
-  "pinniped"
-)
+ggsave(paste0(figure_directory, "density-summary-index-values-", site_file_name, ".pdf"), width = 12, height = 8)
 
 
-for(j in vars){
-  for (i in list_indices){
-    indices <- i
-    g <- false_colour_plot(indices) %>% add_variable_to_FCP(var = j, indices = i)
-  }
-}
+# save plots of density differences with herring at the frequency level
+# against 1min annotations
+dat %>% filter(samp.tot.sec == 60) %>% 
+  group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
+  ggplot(aes(score,
+             fill = as.factor(herring.hs),
+             colour = as.factor(herring.hs)
+  )) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~index_type, scales = "free") +
+  scale_x_continuous(trans = "sqrt") +
+  scale_fill_viridis_d() +
+  scale_colour_viridis_d() +
+  theme_sleek()
+
+ggsave(paste0(figure_directory, "density-freq-level-1min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
+
+
+# against 15 min annotations
+dat %>% filter(samp.tot.sec == 900) %>% 
+  group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
+  ggplot(aes(score,
+             fill = as.factor(herring.hs),
+             colour = as.factor(herring.hs)
+  )) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~index_type, scales = "free") +
+  scale_x_continuous(trans = "sqrt") +
+  scale_fill_viridis_d() +
+  scale_colour_viridis_d() +
+  theme_sleek()
+
+ggsave(paste0(figure_directory, "density-freq-level-15min-anno-", site_file_name, ".pdf"), width = 8, height = 5)
+
+
+
 
 
 
