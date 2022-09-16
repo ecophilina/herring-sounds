@@ -493,20 +493,20 @@ ggplot(alldat, aes(SPL, herring.hs,  colour = site)) + geom_point() + facet_wrap
 
 # combined
 
-filedat <- dat %>% filter(site !="Neck Point (2020)") %>% group_by(filename, site) %>%
-  summarise(
-    herring.hs = mean(herring.hs),
-    herring.f = (mean(herring.hs)),
-    boat = (mean(boat)),
-    waves = (mean(waves)),
-    fish = (mean(fish.knock, na.rm = T)),
-    invert = (mean(invert.snap, na.rm = T)),
-    splash = (mean(splahes, na.rm = T)),
-    rustle = (mean(rustling, na.rm = T)),
-    tonal = (mean(tonal)),
-    n = n()
-  ) %>% pivot_longer(3:11, names_to = "sound", values_to = "score") %>%
-  mutate(site = as.factor(site))
+# filedat <- dat %>% filter(site !="Neck Point (2020)") %>% group_by(filename, site) %>%
+#   summarise(
+#     herring.hs = mean(herring.hs),
+#     herring.f = (mean(herring.hs)),
+#     boat = (mean(boat)),
+#     waves = (mean(waves)),
+#     fish = (mean(fish.knock, na.rm = T)),
+#     invert = (mean(invert.snap, na.rm = T)),
+#     splash = (mean(splahes, na.rm = T)),
+#     rustle = (mean(rustling, na.rm = T)),
+#     tonal = (mean(tonal)),
+#     n = n()
+#   ) %>% pivot_longer(3:11, names_to = "sound", values_to = "score") %>%
+#   mutate(site = as.factor(site))
 
 filedat2 <- alldat %>% filter(site !="Neck Point (2020)") %>% group_by(filename, site) %>%
   summarise(
