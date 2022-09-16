@@ -27,7 +27,7 @@ d2 <- d %>% pivot_longer(1:23, names_to = "index_type", values_to = "score")
 ## making a multivariate plot
 # data matrix
 dm<-d2%>%
-  filter(samp.tot.sec!=60)%>%
+  filter(samp.tot.sec==60)%>%
   mutate(score = (score-min(score))/(max(score)-min(score)))%>%
   select(datetime,site,herring.hs,boat,waves,index_type,score)%>%
   pivot_wider(names_from=index_type,values_from=score)
@@ -156,6 +156,7 @@ theme_set(theme_bw()+
 (dh<-ggplot(data=em3%>%
                 filter(site=="Denman (2020)"))+
     geom_tile(aes(x=dom,y=tid,fill=as.factor(herring.hs)))+
+    scale_fill_viridis_d() +
     scale_y_continuous(name="Hour",breaks=yalab$tid,labels=yalab$hr,limits=c(0,768),expand = c(0,0))+
     xlab("Date (March)")+
     ggtitle("",subtitle="Herring score"))
@@ -163,6 +164,7 @@ theme_set(theme_bw()+
 (db<-ggplot(data=em3%>%
               filter(site=="Denman (2020)"))+
     geom_tile(aes(x=dom,y=tid,fill=as.factor(boat)))+
+    scale_fill_viridis_d() +
     scale_y_continuous(name="Hour",breaks=yalab$tid,labels=yalab$hr,limits=c(0,768),expand = c(0,0))+
     xlab("Date (March)")+
     ggtitle("",subtitle="Herring score")+
@@ -185,6 +187,7 @@ db+df+dh
 (nh<-ggplot(data=em3%>%
               filter(site=="Neck Point (2021)"))+
     geom_tile(aes(x=dom,y=tid,fill=as.factor(herring.hs)))+
+    scale_fill_viridis_d() +
     scale_y_continuous(name="Hour",breaks=yalab$tid,labels=yalab$hr,limits=c(0,768),expand = c(0,0))+
     xlab("Date (March)")+
     ggtitle("",subtitle="Herring score"))
@@ -192,6 +195,7 @@ db+df+dh
 (nb<-ggplot(data=em3%>%
               filter(site=="Neck Point (2021)"))+
     geom_tile(aes(x=dom,y=tid,fill=as.factor(boat)))+
+    scale_fill_viridis_d() +
     scale_y_continuous(name="Hour",breaks=yalab$tid,labels=yalab$hr,limits=c(0,768),expand = c(0,0))+
     xlab("Date (March)")+
     ggtitle("",subtitle="Herring score")+
@@ -243,15 +247,15 @@ ggplot(data=em3,aes(x=RDA1,y=RDA3,color=RDA2,shape=site))+
 # one more way of vizualizing it
 herring.col<-data.frame(herring.hs=unique(em3$herring.hs))%>%
   arrange(herring.hs)%>%
-  mutate(herring.index=viridis::magma(4,end=.8))
+  mutate(herring.index=viridis::viridis(4,end=.8))
 
 boat.col<-data.frame(boat=unique(em3$boat))%>%
   arrange(boat)%>%
-  mutate(boat.index=viridis::magma(3,end=.8))
+  mutate(boat.index=viridis::viridis(3,end=.8))
 
 waves.col<-data.frame(waves=unique(em3$waves))%>%
   arrange(waves)%>%
-  mutate(waves.index=viridis::magma(4,end=.8))
+  mutate(waves.index=viridis::viridis(4,end=.8))
 
 em3b<-left_join(em3,herring.col)%>%
   left_join(boat.col)%>%
@@ -269,7 +273,7 @@ em3b$Index<-factor(em3b$Index,levels=c("FalseColor.index","FalseColor.rda","herr
                               "False Color\nRDA","Herring Score",
                               "Boat Score","Waves Score"))
 
-ggplot(em3b,aes(x=datetime,y=1,fill=colors))+
+ggplot(em3b,aes(x=plot_time,y=1,fill=colors))+
   geom_tile()+
   scale_fill_identity()+
   facet_grid(Index~site,scales="free")+
