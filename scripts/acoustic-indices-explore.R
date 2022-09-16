@@ -5,6 +5,7 @@ library(tidyverse)
 library(lubridate)
 library(ggsidekick)
 library(patchwork)
+library(gridExtra)
 
 # for adding sig tests to boxplots
 library(ggpubr)
@@ -24,10 +25,6 @@ figure_directory <- "figs/"
 # output_parent_directory <- "data/nbdenoise/"
 # figure_directory <- "figs/nbdenoise/"
 
-# choose which data set/sample to compile
-# site_file_name <- "denman"
-# site_file_name <- "collishaw"
-site_file_name <- "neckpt"
 
 dir.create(file.path(figure_directory))
 
@@ -76,7 +73,7 @@ boat.col<-data.frame(boat=unique(d$boat))%>%
   arrange(boat)%>% 
   # mutate(boat.index=viridis::viridis(3, begin = 0.25, end=1))
   # mutate(boat.index=viridis::mako(3, begin = 0.25, end=1))
-  mutate(boat.index=viridis::plasma(3,begin = 0.25, end=1))
+  mutate(boat.index=viridis::plasma(3,begin = 0.33, end=1))
 
 waves.col<-data.frame(waves=unique(d$waves))%>%
   arrange(waves)%>%
@@ -215,6 +212,7 @@ dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
   theme_sleek())
 
 ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-subset2.png"), width = 10, height = 2.5)
+
 
 
 
@@ -406,10 +404,7 @@ hb %>% group_by(herring.f) %>% filter(boat != 3) %>% summarise(n = n())
 
 
 
-
-
-
-# start with exploring high band (aka. ratio denominator) ----
+# exploring high band (aka. ratio denominator) ----
 
 # boat
 stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ boat, 
@@ -636,7 +631,7 @@ ggsave(paste0("figs/high-band-", index_type, "-all-other-sounds.png"),
 
 
 
-### explore herring band on it's own
+# explore herring band on it's own ----
 
 stat.test2 <- hb %>% group_by(site) %>% #filter(rustle < 3) %>% 
   wilcox_test(ratio_n ~ rustle, 
@@ -866,7 +861,7 @@ ggsave(paste0("figs/herring-band-", index_type, "-all-other-sounds.png"),
        plot=ggallhb, width = 8, height = 10)
 
 
-# explore ratio
+# explore ratio ----
 
 stat.test2 <- hb %>% group_by(site) %>% #filter(rustle < 3) %>% 
   wilcox_test(hb_ratio ~ rustle, 
@@ -993,17 +988,18 @@ gg <- grid.arrange(gb, gw, gr, gi,
 ggsave(paste0("figs/herring-band-ratio-", index_type, "-other-sounds.png"), 
        plot=gg, width = 7, height = 7)
 
-# extract legend for use with annotation bars
 
-gb2 <- gb + labs(colour = "Score", fill = "Score") + 
-  theme(legend.position = "right")
+# ## extract legend for use with annotation bars ----
+# 
+# gb2 <- gb + labs(colour = "Score", fill = "Score") + 
+#   theme(legend.position = "right")
+# 
+# score_legend <- ggpubr::get_legend(gb2)
+# as_ggplot(score_legend)
+# 
 
-score_legend <- ggpubr::get_legend(gb2)
-as_ggplot(score_legend)
 
-
-
-# just herring box plots
+## just herring box plots ----
 stat.test <- hb %>% group_by(group) %>% wilcox_test(hb_ratio ~ herring.f, 
                                                     alternative = "less", 
                                                     ref.group = "0") %>% 
@@ -1028,7 +1024,7 @@ ggsave(paste0("figs/herring-band-ratio-", index_type, "2.png"), width = 4, heigh
 
 
 
-### effects of boat and site
+## effects of boat and site ----
 
 stat.test <- hb %>% group_by(site) %>% wilcox_test(hb_ratio ~ herring.f, 
                                                    alternative = "less", 
@@ -1051,7 +1047,6 @@ g1 <- hb %>% ggplot() +
   ggsidekick::theme_sleek() + theme(legend.position = "none")
 
 ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-site.png"), width = 5.5, height = 3.5)
-
 
 
 
@@ -1093,12 +1088,34 @@ ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-boat-and-site.png"), 
 
 # FALSE COLOUR SPECTROGRAM ------
 
+# choose which data set/sample to compile
+# site_file_name <- "denman"
+# site_file_name <- "collishaw"
+site_file_name <- "neckpt"
+
+
 # For FCP focus on just one site
 
 dat1 <- dat %>% filter(site_file == site_file_name)
 unique(data$site_file)
 unique(data$site)
 
+
+## extract legend for use with annotation bars ----
+
+(leg <- dat1 %>% filter(samp.tot.sec == 60) %>%
+   filter(index_type %in% c("ACI")) %>%
+   ggplot(aes(kHz, score,
+              colour = as.factor(boat)
+   )) +
+   geom_point(shape = 15, size = 4) +
+   scale_colour_viridis_d(option = "plasma", begin = 0.33) +
+   labs(y = "Acoustic Index Score", 
+        colour = "Score") +
+   theme_sleek() + theme(legend.direction = "horizontal"))
+
+score_legend <- ggpubr::get_legend(leg)
+as_ggplot(score_legend)
 
 
 # # now focus on just one site
@@ -1366,7 +1383,7 @@ add_var_bars_to_FCP <- function(FCP, indices,
           strip.placement = "outside",
           axis.text = element_blank(),
           axis.title = element_blank(),
-          axis.ticks =element_blank())
+          axis.ticks = element_blank())
   
   # g <- g + ggtitle(paste0(.dat1$site[1])
   #                  # , subtitle = paste0("bars at top indicate samples with ", var, 
@@ -1375,7 +1392,7 @@ add_var_bars_to_FCP <- function(FCP, indices,
   #                  #                   ", green = ", indices[2], ", blue = ", indices[3])
   #                  )
   # browser()
-  g /g2 + plot_layout(heights = c(3,1.2))
+  g /g2/score_legend + plot_layout(heights = c(3,1.2,0.5))
   
   ggsave(paste0(figure_directory, "false-colour-spectrogram-", 
                 paste(indices, collapse = "-"), "-", 
@@ -1518,20 +1535,20 @@ for (i in list_indices){
 # 
 # 
 # 
-
-
-# save plots density differences with herring for summary index values
-d2 %>% filter(samp.tot.sec == 60) %>% ggplot(aes(score,
-                                                 fill = as.factor(herring.hs),
-                                                 colour = as.factor(herring.hs)
-)) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~index_type, scales = "free") +
-  scale_fill_viridis_d() +
-  scale_colour_viridis_d() +
-  theme_sleek()
-
-ggsave(paste0(figure_directory, "density-summary-index-values-all-sites.pdf"), width = 12, height = 8)
+# 
+# 
+# # save plots density differences with herring for summary index values
+# d2 %>% filter(samp.tot.sec == 60) %>% ggplot(aes(score,
+#                                                  fill = as.factor(herring.hs),
+#                                                  colour = as.factor(herring.hs)
+# )) +
+#   geom_density(alpha = 0.5) +
+#   facet_wrap(~index_type, scales = "free") +
+#   scale_fill_viridis_d() +
+#   scale_colour_viridis_d() +
+#   theme_sleek()
+# 
+# ggsave(paste0(figure_directory, "density-summary-index-values-all-sites.pdf"), width = 12, height = 8)
 
 
 # save plots of density differences with herring for summary index values for one site
