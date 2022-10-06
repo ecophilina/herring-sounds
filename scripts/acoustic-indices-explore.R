@@ -28,9 +28,13 @@ figure_directory <- "figs/"
 
 dir.create(file.path(figure_directory))
 
-d <- readRDS(paste0(output_parent_directory, "towsey-summary-scores3.rds")) 
-spl <- readRDS("wdata/all-annotations2.rds") %>% select(filename, SPL) %>% distinct()
-d <- left_join(spl,d)
+d <- readRDS(paste0(output_parent_directory, "towsey-summary-scores4.rds")) 
+
+## check for NAs
+# na_check <- d %>% filter(is.na(herring.hs))
+
+spl <- readRDS("wdata/all-annotations3.rds") %>% select(filename, SPL) %>% distinct()
+d <- left_join(spl,d) %>% filter(!is.na(herring.hs))
 
 # SPL and BackgroundNoise are not the same
 ggplot(d) + geom_point(aes(SPL, BackgroundNoise)) + theme_sleek()
@@ -156,27 +160,36 @@ ld <- bind_rows(ld1, ld2, ld3)
 # convert freq bins into approximate kHz
 # apparently wav file has been downsampled to 22050 sample rate
 # this maxes out at 11025 Hz
-unique(ld$file_dt)
+# unique(ld$file_dt)
 unique(ld$freq_bin_num)
 
 # unique(ld$kHz)
 ld <- ld %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
+
+# shrink dataset kHz resolution to speed up plotting and ease merge with SPL data
 ld <- ld %>% mutate(kHz = round(kHz, 1)) %>% 
   group_by(index_type, kHz, yr, mnth, day, hr, min, sec, minintofile, site, site_file) %>%
   summarise(score = mean(score))
+
 ld <- ld %>% ungroup() 
 
-psd1 <- readRDS(file = paste0("data/PSD_neck21.rds")) %>%
-  mutate(site_file = "neckpt") 
-psd2 <- readRDS(file = paste0("data/PSD_denman20.rds")) %>%
-  mutate(site_file = "denman") 
-psd3 <- readRDS(file = paste0("data/PSD_collishaw20.rds")) %>%
-  mutate(site_file = "collishaw") 
+
+psd1 <- readRDS(file = paste0("data/PSD_denman20.rds")) %>%
+  mutate(
+    DateTime = ymd_hms(datetime),
+    site_file = "denman") 
+psd2 <- readRDS(file = paste0("data/PSD_collishaw20.rds")) %>%
+  mutate(
+    DateTime = ymd_hms(datetime),
+    site_file = "collishaw") 
+psd3 <- readRDS(file = paste0("data/PSD_neck21.rds")) %>%
+  mutate(
+    DateTime = ymd_hms(datetime)-30, # somehow 30 sec seems to have been added to dt for neckpt only 
+    site_file = "neckpt") 
 
 psd <- bind_rows(psd1, psd2, psd3) %>% mutate(
-  index_type = "PSD",
+  index_type = "SPL",
   score = PSD,
-  DateTime = ymd_hms(datetime),
   yr=year(DateTime),
   mnth=month(DateTime),
   day=day(DateTime),
@@ -194,14 +207,16 @@ ld_minintofile <- ld %>%
   select(-index_type, -sec, -kHz, -score) %>% 
   distinct()
 
-psd <- left_join(psd, ld_minintofile)
+psd_minintofile <- left_join(psd, ld_minintofile)
 
-ld <- bind_rows(ld, psd) %>% select(-sec) %>% distinct() 
-fld <- ld %>% filter(kHz <= 11)
+fld <- bind_rows(ld, psd_minintofile) %>% select(-sec) %>% distinct() 
+fld <- fld %>% filter(kHz <= 11)
 
 # unique(ld$index_type)
 unique(ld$site)
+unique(fld$site)
 
+na_check <- ld %>% filter(is.na(site))
 
 # to test if join working as should...
 # %>% select("site", "file_dt", "minintofile", "herring.hs") 
@@ -244,7 +259,7 @@ dat <- inner_join(fld, d) %>% select(-trap_id)
 unique(dat$index_type)
 
 (p <- dat %>% filter(samp.tot.sec == 60) %>%
-  filter(index_type %in% c("ACI", "BGN", "RPS", "PSD")) %>%
+  filter(index_type %in% c("ACI", "RPS", "BGN", "SPL")) %>%
   # filter(boat < 2) %>% 
   # group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
   ggplot(aes(kHz, score,
@@ -253,7 +268,7 @@ unique(dat$index_type)
   )) +
   # geom_point(alpha = 0.1) +
   geom_smooth() +
-  facet_wrap(~index_type, scales = "free", ncol = 3) +
+  facet_wrap(~index_type, scales = "free", ncol = 2) +
   # scale_x_continuous(trans = "sqrt") +
   scale_fill_viridis_d(option = "plasma") +
   scale_colour_viridis_d(option = "plasma") +
@@ -262,7 +277,7 @@ unique(dat$index_type)
       fill = "Herring score") +
   theme_sleek())
 
-ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-subset2.png"), width = 10, height = 2.5)
+ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-subset2.png"), width = 5.5, height = 5)
 
 
 
@@ -284,7 +299,7 @@ dat <- readRDS("wdata/freq-level-towsey-scores-w-annotations.rds")
 # index_type <- "RNG"
 # index_type <- "RVT"
 # index_type <- "BGN"
-index_type <- "PSD"
+index_type <- "SPL"
 # index_type <- "RHZ"
 # index_type <- "OSC"
 

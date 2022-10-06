@@ -197,7 +197,7 @@ combine_with_annotations <- function(site_description, site_file_name, towsey_di
 }
 
 data <- purrr::pmap_dfr(list_sites, combine_with_annotations)
-saveRDS(data, paste0(output_parent_directory, "towsey-summary-scores3.rds"))
+saveRDS(data, paste0(output_parent_directory, "towsey-summary-scores4.rds"))
 
 
 
