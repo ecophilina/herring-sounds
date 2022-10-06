@@ -143,34 +143,39 @@ freq <- c(d[1,2:ncol(d)])
 dt <- as.POSIXlt.numeric(as.numeric(d[2:nrow(d),1]), origin = "1970-01-01" ) # extract datetime from first col
 
 d1 <- d[2:nrow(d), 2:ncol(d)]
-d2 <- as_tibble(t(d1))
+d2 <- as_tibble(t(d1), .name_repair = "minimal")
 # see what's happening
 d[1:5,1:5]
 d1[1:5,1:5]
 d2[1:5,1:15]
 
 colnames(d2) <- dt
-d2$freq <- freq
-d2$freq_kHz <- freq/1000
-
-d3 <- d2 %>% 
+# d2$freq <- freq
+# d2$freq_kHz <- freq/1000
+d2$kHz <- round(freq/1000, 1)
+head(d2)
+d3 <- d2 %>% group_by(kHz) %>% summarise_all(mean)
+  
+d4 <- d3 %>% 
   pivot_longer(
-    cols = 1:(length(dt)), names_to = "datetime", values_to = "PSD"
-  ) %>% mutate(
-    DateTime = ymd_hms(datetime),
-    yr=year(DateTime),
-    m=month(DateTime),
-    d=day(DateTime),
-    hr=hour(DateTime),
-    min=minute(DateTime),
-    sec=second(DateTime),
-    date=ymd(paste(yr,m,d)),
-    t=as.POSIXct(datetime, origin = "1970-01-01"),
-    daily_min=(local_time(DateTime, units = "mins")),
-    day_hr = paste0(date, "-", hr) 
-  ) %>% select(-DateTime)
+    cols = 2:(length(dt)+1), names_to = "datetime", values_to = "PSD"
+  ) 
 
+# d5 <- d4 %>% mutate(
+#     DateTime = ymd_hms(datetime),
+#     yr=year(DateTime),
+#     m=month(DateTime),
+#     d=day(DateTime),
+#     hr=hour(DateTime),
+#     min=minute(DateTime),
+#     sec=second(DateTime),
+#     date=ymd(paste(yr,m,d)),
+#     t=as.POSIXct(datetime, origin = "1970-01-01"),
+#     daily_min=(local_time(DateTime, units = "mins")),
+#     day_hr = paste0(date, "-", hr) 
+#   ) %>% select(-DateTime)
 
+saveRDS(d4, file = paste0("data/PSD_", loc, ".rds"))
 
 # make ggplot version of Viewer() output fig
 jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))

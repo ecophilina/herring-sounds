@@ -28,10 +28,16 @@ figure_directory <- "figs/"
 
 dir.create(file.path(figure_directory))
 
-d <- readRDS(paste0(output_parent_directory, "towsey-summary-scores.rds")) 
+d <- readRDS(paste0(output_parent_directory, "towsey-summary-scores3.rds")) 
+spl <- readRDS("wdata/all-annotations2.rds") %>% select(filename, SPL) %>% distinct()
+d <- left_join(spl,d)
+
+# SPL and BackgroundNoise are not the same
+ggplot(d) + geom_point(aes(SPL, BackgroundNoise)) + theme_sleek()
 
 glimpse(d)
-d2 <- d %>% pivot_longer(1:23, names_to = "index_type", values_to = "score")
+
+d2 <- d %>% pivot_longer(2:25, names_to = "index_type", values_to = "score")
 
 
 # # # Plot correlation matrix - too slow at frequency level, worth exploring here?
@@ -73,7 +79,9 @@ boat.col<-data.frame(boat=unique(d$boat))%>%
   arrange(boat)%>% 
   # mutate(boat.index=viridis::viridis(3, begin = 0.25, end=1))
   # mutate(boat.index=viridis::mako(3, begin = 0.25, end=1))
-  mutate(boat.index=viridis::plasma(3,begin = 0.33, end=1))
+  # mutate(boat.index=viridis::plasma(3,begin = 0.33, end=1))
+  mutate(boat.index=viridis::plasma(4, end=1),
+         boat.index=ifelse(boat==0, "white", boat.index))
 
 waves.col<-data.frame(waves=unique(d$waves))%>%
   arrange(waves)%>%
@@ -144,15 +152,61 @@ ld3 <- readRDS(paste0(output_parent_directory, "towsey-indices-neckpt.rds"))%>%
 
 ld <- bind_rows(ld1, ld2, ld3)
 
+
+# convert freq bins into approximate kHz
+# apparently wav file has been downsampled to 22050 sample rate
+# this maxes out at 11025 Hz
+unique(ld$file_dt)
+unique(ld$freq_bin_num)
+
+# unique(ld$kHz)
+ld <- ld %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
+ld <- ld %>% mutate(kHz = round(kHz, 1)) %>% 
+  group_by(index_type, kHz, yr, mnth, day, hr, min, sec, minintofile, site, site_file) %>%
+  summarise(score = mean(score))
+ld <- ld %>% ungroup() 
+
+psd1 <- readRDS(file = paste0("data/PSD_neck21.rds")) %>%
+  mutate(site_file = "neckpt") 
+psd2 <- readRDS(file = paste0("data/PSD_denman20.rds")) %>%
+  mutate(site_file = "denman") 
+psd3 <- readRDS(file = paste0("data/PSD_collishaw20.rds")) %>%
+  mutate(site_file = "collishaw") 
+
+psd <- bind_rows(psd1, psd2, psd3) %>% mutate(
+  index_type = "PSD",
+  score = PSD,
+  DateTime = ymd_hms(datetime),
+  yr=year(DateTime),
+  mnth=month(DateTime),
+  day=day(DateTime),
+  hr=hour(DateTime),
+  min=minute(DateTime),
+  sec=second(DateTime)
+  #     date=ymd(paste(yr,m,d)),
+  #     t=as.POSIXct(datetime, origin = "1970-01-01"),
+  #     daily_min=(local_time(DateTime, units = "mins")),
+  #     day_hr = paste0(date, "-", hr) 
+) %>% select(-DateTime, -datetime, -PSD) 
+
+
+ld_minintofile <- ld %>% 
+  select(-index_type, -sec, -kHz, -score) %>% 
+  distinct()
+
+psd <- left_join(psd, ld_minintofile)
+
+ld <- bind_rows(ld, psd) %>% select(-sec) %>% distinct() 
+fld <- ld %>% filter(kHz <= 11)
+
 # unique(ld$index_type)
 unique(ld$site)
-
 
 
 # to test if join working as should...
 # %>% select("site", "file_dt", "minintofile", "herring.hs") 
 # compare with original dataframe length
-dat <- inner_join(ld, d) %>% select(-trap_id, -program)
+dat <- inner_join(fld, d) %>% select(-trap_id)
 # Joining, by = c("trap_id", "yr", "mnth", "day", "hr", "min", "sec", "file_dt", "minintofile", "datetime", "plot_time", "site")
 
 # # other checks to see if merge worked
@@ -160,16 +214,9 @@ dat <- inner_join(ld, d) %>% select(-trap_id, -program)
 # range(d$file_dt)
 # .dat <- filter(dat,
 #                index_type == "ACI" &
-#                freq_bin_num == 10) %>% View()
+#                kHz == 10) %>% View()
 
-# convert freq bins into approximate kHz
-# apparently wav file has been downsampled to 22050 sample rate
-# this maxes out at 11025 Hz
-unique(dat$file_dt)
-unique(dat$freq_bin_num)
 
-dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
-# unique(dat$kHz)
 
 # p <- dat %>% filter(samp.tot.sec == 60) %>%
 #   # filter(boat < 2) %>% 
@@ -192,8 +239,12 @@ dat <- dat %>% mutate(kHz = round(freq_bin_num * 11025 / 256) / 1000)
 #  
 # ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-all.png"), width = 7, height = 8)
 
+
+
+unique(dat$index_type)
+
 (p <- dat %>% filter(samp.tot.sec == 60) %>%
-  filter(index_type %in% c("ACI", "BGN", "RPS")) %>%
+  filter(index_type %in% c("ACI", "BGN", "RPS", "PSD")) %>%
   # filter(boat < 2) %>% 
   # group_by(index_type) %>% mutate(score = (score-min(score))/(max(score)-min(score))) %>%
   ggplot(aes(kHz, score,
@@ -216,18 +267,26 @@ ggsave(paste0(figure_directory, "smooth-freq-level-1min-anno-subset2.png"), widt
 
 
 
+saveRDS(dat, "wdata/freq-level-towsey-scores-w-annotations.rds")
+
+dat <- readRDS("wdata/freq-level-towsey-scores-w-annotations.rds")
+
+
+
+
+
+
 
 # calculate a herring band ACI ratio
-index_type <- "ACI"
+# index_type <- "ACI"
 
 # index_type <- "RPS"
 # index_type <- "RNG"
 # index_type <- "RVT"
 # index_type <- "BGN"
-
+index_type <- "PSD"
 # index_type <- "RHZ"
 # index_type <- "OSC"
-
 
 ratio <- dat %>% filter(index_type == !!index_type) %>% distinct()
 ratio_n <- ratio %>% 
@@ -274,21 +333,21 @@ hb_ratio_sum <- d %>%
     tonal = mean(tonal, na.rm = T)
   ) %>% mutate( 
     # `Herring` 
-    herring.f = ifelse(herring.hs > 0 & herring.hs <= 1, 1, round(herring.hs)),
-    `Pinnipeds` = ifelse(pinniped > 0 & pinniped <= 1, 1, round(pinniped)),
-    `Birds` = ifelse(gull > 0 & gull <= 1, 1, round(gull)),
+    herring.f = ifelse(herring.hs > 0 & herring.hs <= 1, 1, ifelse(herring.hs > 2, 3, round(herring.hs))),
+    `Pinnipeds` = ifelse(pinniped > 0 & pinniped <= 1, 1, ifelse(pinniped > 2, 3, round(pinniped))),
+    `Birds` = ifelse(gull > 0 & gull <= 1, 1, ifelse(gull > 2, 3, round(gull))),
     # `Boat noise` 
-    boat = ifelse(boat > 0 & boat <= 1, 1, round(boat)),
+    boat = ifelse(boat > 0 & boat <= 1, 1, ifelse(boat > 2, 3, round(boat))),
     # `Wave noise` 
-    waves = ifelse(waves > 0 & waves <= 1, 1, round(waves)),
+    waves = ifelse(waves > 0 & waves <= 1, 1, ifelse(waves > 2, 3, round(waves))),
     # `Fish knocks` 
-    fish = ifelse(fish > 0 & fish <= 1, 1, round(fish)),
+    fish = ifelse(fish > 0 & fish <= 1, 1, ifelse(fish > 2, 3, round(fish))),
     # `Invertebrate snaps` 
-    invert = ifelse(invert > 0 & invert <= 1, 1, round(invert)),
+    invert = ifelse(invert > 0 & invert <= 1, 1, ifelse(invert > 2, 3, round(invert))),
     # `Splashing`  
-    splash = ifelse(splash > 0 & splash <= 1, 1, round(splash)),
+    splash = ifelse(splash > 0 & splash <= 1, 1, ifelse(splash > 2, 3, round(splash))),
     # `Other mechanical` 
-    rustle  = ifelse(rustle > 0 & rustle <= 1, 1, round(rustle)),
+    rustle  = ifelse(rustle > 0 & rustle <= 1, 1, ifelse(rustle > 2, 3, round(rustle))),
     ## was simply rounding before, so will keep here for comparison
     # herring.f = round(herring.hs),
     # pinnipeds = round(pinniped),
@@ -297,7 +356,7 @@ hb_ratio_sum <- d %>%
     # invert = round(invert),
     # splash = round(splash),
     # rustle = round(rustle),
-    `Pinniped deterrent` = ifelse(tonal > 0 & tonal <= 1, 1, round(tonal))
+    `Pinniped deterrent` = ifelse(tonal > 0 & tonal <= 1, 1, ifelse(tonal > 2, 3, round(tonal)))
   ) %>%
   # distinct() %>%
   left_join(., ratio2)
@@ -314,8 +373,10 @@ hb_ratio_sum <- d %>%
 
 
 hb_ratio_lt2 <- hb_ratio_sum %>%
+  # filter(boat <= 1.5) 
   filter(boat <= 2) 
 hb_ratio_gt2 <- hb_ratio_sum %>%
+  # filter(boat > 1.5)   
   filter(boat > 2) 
 
 hb_ratio_lt2$boat_group <- "Boat score <= 2"
@@ -343,10 +404,21 @@ hb %>% mutate(pos_ratio = ifelse(hb_ratio > 0, 1, 0)) %>% group_by(herring.f, po
 # 6         2         1    47
 # 7         3         1     7
 
-# 13 false negatives
-47 + 7 # 54 true positives ACI, 58 for RPS
-86 # false positives, 174 for RPS
-306  # 306 true negatives for ACI, 306 for RPS
+# herring.f pos_ratio     n
+# <dbl>     <dbl> <int>
+# 1         0         0   368
+# 2         0         1    93
+# 5         2         0    14
+# 6         2         1    47
+# 7         3         0     5
+# 8         3         1     8
+
+
+14 + 5 #false negatives
+47 + 8 # 54 true positives ACI, 58 for RPS
+93 # false positives, 174 for RPS
+368  # 306 true negatives for ACI, 306 for RPS
+
 
 hb %>% group_by(herring.f) %>% summarise(n = n())
 # # A tibble: 4 × 2
@@ -356,20 +428,29 @@ hb %>% group_by(herring.f) %>% summarise(n = n())
 # 3         2    60
 # 4         3     7
 
-# total negatives 
-392 
+# herring.f     n
+# <dbl> <int>
+#   1         0   461
+# 2         1   136
+# 3         2    61
+# 4         3    13
+
+# true negatives 
+461
+# true positives 
+61 + 13
 
 # false positive rate (false positives/true negatives)
-86/392 
+93/461 
 
 # false negative rate (false negative/true positives)
-13/67
+19/74
 
 # What about just for boat <= 2?
 hb %>% mutate(pos_ratio = ifelse(hb_ratio > 0, 1, 0)) %>% 
   filter(boat != 3) %>%
+  # filter(boat <= 1.5) %>%
   group_by(herring.f, pos_ratio) %>% summarise(n = n())
-
 
 # herring.f pos_ratio     n
 # <dbl>     <dbl> <int>
@@ -379,12 +460,25 @@ hb %>% mutate(pos_ratio = ifelse(hb_ratio > 0, 1, 0)) %>%
 # 6         2         1    44
 # 7         3         1     7
 
-# 9 false negatives for ACI, 6 for RPS
-44 + 7 # true positives, 54 for RPS
-20 # false positives, 57 for RPS
-122 # true negatives, 85 for RPS
 
-hb %>% group_by(herring.f) %>% filter(boat != 3) %>% summarise(n = n())
+# herring.f pos_ratio     n
+# <dbl>     <dbl> <int>
+# 1         0         0   195
+# 2         0         1    54
+# 5         2         0    11
+# 6         2         1    44
+# 7         3         0     5
+# 8         3         1     8
+
+11 + 5 # false negatives for ACI, 6 for RPS
+44 + 8 # true positives, 54 for RPS
+54 # false positives, 57 for RPS
+195 # true negatives, 85 for RPS
+
+hb %>% group_by(herring.f) %>% 
+  filter(boat != 3) %>%
+  # filter(boat <= 1.5) %>%
+  summarise(n = n())
 # # A tibble: 4 × 2
 # herring.f     n
 # <dbl> <int>
@@ -392,14 +486,19 @@ hb %>% group_by(herring.f) %>% filter(boat != 3) %>% summarise(n = n())
 # 3         2    53
 # 4         3     7
 
-
+# herring.f     n
+# <dbl> <int>
+#   1         0   249
+# 2         1    88
+# 3         2    55
+# 4         3    13
 
 # false positive rate (false positives/true negatives)
-20/142 # for ACI
+20/249 # for ACI
 57/85 # for RPS
 
 # false negative rate (false negative/true positives)
-9/(53 + 7) # for ACI
+16/(55 + 13) # for ACI
 6/54 #for RPS
 
 
@@ -409,7 +508,7 @@ hb %>% group_by(herring.f) %>% filter(boat != 3) %>% summarise(n = n())
 # boat
 stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ boat, 
                                                    alternative = "less", 
-                                                   ref.group = "1") %>% 
+                                                   ref.group = "0") %>% 
   add_xy_position(x = "boat") %>% 
   mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.22, y.position)) %>% 
   filter(p.adj.signif!="ns")
@@ -457,7 +556,7 @@ ggsave(paste0("figs/high-band-", index_type, "-waves.png"), width = 6, height = 
 #inverts
 stat.test <- hb %>% group_by(site) %>% wilcox_test(ratio_d ~ invert, 
                                                    alternative = "less", 
-                                                   ref.group = "1") %>% 
+                                                   ref.group = "0") %>% 
   add_xy_position(x = "invert") %>% 
   mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.12, y.position)) %>% 
   filter(p.adj.signif!="ns")
@@ -626,7 +725,7 @@ ggallhigh <- grid.arrange(gh,gb, gw, gi, gr, gp, gg, gd,
                    left = paste0("High band (7.6 - 8.0 kHz) ", index_type, "")
 )
 
-ggsave(paste0("figs/high-band-", index_type, "-all-other-sounds.png"), 
+ggsave(paste0("figs/high-band-", index_type, "-all-other-sounds-gt2.png"), 
        plot=ggallhigh, width = 8, height = 10)
 
 
@@ -660,7 +759,7 @@ gr <- hb %>% ggplot() +
 stat.test <- hb %>% group_by(site) %>% #filter(rustle < 3) %>% 
   wilcox_test(ratio_n ~ boat, 
               alternative = "less", 
-              ref.group = "1") %>% 
+              ref.group = "0") %>% 
   add_xy_position(x = "boat") %>% 
   mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.25, y.position)) %>% 
   filter(p.adj.signif!="ns")
@@ -752,7 +851,7 @@ ggsave(paste0("figs/herring-band-", index_type, "-waves.png"), width = 4, height
 stat.test <- hb %>% group_by(site) %>% #filter(rustle < 3) %>% 
   wilcox_test(ratio_n  ~ invert, 
               alternative = "less", 
-              ref.group = "1") %>% 
+              ref.group = "0") %>% 
   add_xy_position(x = "invert") %>% 
   mutate(y.position = ifelse(site == "Neck Point (2021)", y.position -0.14, y.position)) %>% 
   filter(p.adj.signif!="ns")
@@ -772,12 +871,12 @@ gi <- hb %>% ggplot() +
 
 ggsave(paste0("figs/herring-band-", index_type, "-inverts.png"), width = 4, height = 3)
 
-# # sample sizes too small
-# stat.test <- hb %>% group_by(site) %>% #filter(rustle < 3) %>% 
-#   wilcox_test(ratio_n  ~ Pinnipeds, 
-#               alternative = "less", 
-#               ref.group = "0") %>% 
-#   add_xy_position(x = "Pinnipeds") %>% filter(p.adj.signif!="ns")
+# sample sizes too small
+stat.test <- hb %>% group_by(site) %>% #filter(rustle < 3) %>%
+  wilcox_test(ratio_n  ~ Pinnipeds,
+              alternative = "less",
+              ref.group = "0") %>%
+  add_xy_position(x = "Pinnipeds") %>% filter(p.adj.signif!="ns")
 
 gp <- hb %>% ggplot() + 
   facet_wrap(~site, ncol = 4)+
@@ -794,10 +893,10 @@ gp <- hb %>% ggplot() +
 
 ggsave(paste0("figs/herring-band-", index_type, "-pinnipeds.png"), width = 4, height = 3)
 
-# stat.test <- hb %>% group_by(group) %>% #filter(rustle < 3) %>% 
-#   wilcox_test(ratio_n  ~ Birds, 
-#               alternative = "less", 
-#               ref.group = "0") %>% 
+# stat.test <- hb %>% group_by(group) %>% #filter(rustle < 3) %>%
+#   wilcox_test(ratio_n  ~ Birds,
+#               alternative = "less",
+#               ref.group = "0") %>%
 #   add_xy_position(x = "Birds") %>% filter(p.adj.signif!="ns")
 
 gg <- hb %>% ggplot() + 
@@ -857,7 +956,7 @@ ggallhb <- grid.arrange(gh,gb, gw, gi, gr, gp, gg, gd,
                           left = paste0("Herring band (2.7 - 3.1 kHz) ", index_type, "")
 )
 
-ggsave(paste0("figs/herring-band-", index_type, "-all-other-sounds.png"), 
+ggsave(paste0("figs/herring-band-", index_type, "-all-other-sounds-gt2.png"), 
        plot=ggallhb, width = 8, height = 10)
 
 
@@ -894,7 +993,7 @@ ggsave(paste0("figs/herring-band-ratio-", index_type, "-rustle.png"), width = 6,
 stat.test <- hb %>% group_by(group) %>% #filter(rustle < 3) %>% 
   wilcox_test(hb_ratio ~ boat, 
               alternative = "less", 
-              ref.group = "1") %>% 
+              ref.group = "0") %>% 
   add_xy_position(x = "boat")  %>% 
   filter(p.adj.signif!="ns")
 
@@ -937,7 +1036,7 @@ ggsave(paste0("figs/waves-in-herring-band-ratio-", index_type, ".png"), width = 
 stat.test <- hb %>% group_by(group) %>% #filter(rustle < 3) %>% 
   wilcox_test(hb_ratio ~ invert, 
               alternative = "less", 
-              ref.group = "1") %>% 
+              ref.group = "0") %>% 
   add_xy_position(x = "invert") %>% 
   filter(p.adj.signif!="ns")
 
@@ -982,10 +1081,10 @@ gr <- gr + theme(axis.title.y = element_blank())
 
 gg <- grid.arrange(gb, gw, gr, gi, 
                    nrow = 2,
-                   left = "Herring band ACI ratio"
+                   left = paste0("Herring band ", index_type, " ratio")
 )
 
-ggsave(paste0("figs/herring-band-ratio-", index_type, "-other-sounds.png"), 
+ggsave(paste0("figs/herring-band-ratio-", index_type, "-other-sounds-gt2.png"), 
        plot=gg, width = 7, height = 7)
 
 
@@ -1078,11 +1177,11 @@ g2 <- g2 + theme(axis.title = element_blank())
 gg <- grid.arrange(g1, g2,
              nrow = 2,
              # heights = c(1.1,1),
-             left = "Herring band ACI ratio",
+             left = paste0("Herring band ", index_type, " ratio"),
              bottom = "Herring score"
 )
 
-ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-boat-and-site.png"), plot=gg, width = 6, height = 7)
+ggsave(paste0("figs/herring-band-ratio-", index_type, "-by-boat-and-site-gt2.png"), plot=gg, width = 6, height = 7)
 
 
 
