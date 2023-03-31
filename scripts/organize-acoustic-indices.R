@@ -105,17 +105,17 @@ combine_with_annotations <- function(site_description, site_file_name, towsey_di
   if(site_file_name == "denman") {
     d <- read.csv("raw-annotations/Denman_1min_200306.csv", stringsAsFactors = F) %>%
       mutate(site = "Denman (2020)")
-    d2<-read.csv("raw-annotations/Denman_15min_200308.csv", stringsAsFactors = F) %>% 
+    d2<-read.csv("raw-annotations/Denman_15min_200308_PE2.csv", stringsAsFactors = F) %>% 
       mutate(site = "Denman (2020)") 
   }
   
   if(site_file_name == "collishaw") {
     d <-read.csv("raw-annotations/Collishaw_1min_200306.csv", stringsAsFactors = F) %>%
       mutate(site = "Collishaw (2020)") %>% rename(herring.hs = herring.j)
-    d2<-read.csv("raw-annotations/Collishaw_15min_200308.csv", stringsAsFactors = F) %>% 
+    d2<-read.csv("raw-annotations/Collishaw_15min_200308_PE2.csv", stringsAsFactors = F) %>% 
       mutate(site = "Collishaw (2020)") 
   }
-  
+
   if(site_file_name == "neckpt") {
     # found errors in file names on March 10, 23:30, 11th 00:00, and 14th 00:00 and 03:00
     d <- read.csv("raw-annotations/NeckPt_1min_210311_PE.csv", stringsAsFactors = F) %>%
@@ -125,10 +125,10 @@ combine_with_annotations <- function(site_description, site_file_name, towsey_di
         herring.frt = as.integer(herring.frt)
       ) %>%
       rename(herring.hs = herring.j)
-    d2<-read.csv("raw-annotations/NeckPt_15min_210313_PE.csv", stringsAsFactors = F) %>% 
+    d2<-read.csv("raw-annotations/NeckPt_15min_210313_PE2.csv", stringsAsFactors = F) %>% 
       mutate(site = "Neck Point (2021)") 
   }
-  
+
   d <- d %>%
     separate(filename,
              sep = c("\\."),
@@ -197,7 +197,7 @@ combine_with_annotations <- function(site_description, site_file_name, towsey_di
 }
 
 data <- purrr::pmap_dfr(list_sites, combine_with_annotations)
-saveRDS(data, paste0(output_parent_directory, "towsey-summary-scores.rds"))
+saveRDS(data, paste0(output_parent_directory, "towsey-summary-scores4.rds"))
 
 
 
