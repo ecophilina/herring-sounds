@@ -90,7 +90,7 @@ filedat2$Site <- factor(filedat2$site,
 
 
 # mdatsum <- 
-0.97
+# 0.97
 
 threshold_boxplot <- function(set_threshold, sound_type = "Herring") {
 mdat %>% filter(Score > set_threshold) %>% 
@@ -106,19 +106,19 @@ mdat %>% filter(Score > set_threshold) %>%
   ggsidekick::theme_sleek()
 }
 
-library(patchwork)
+# library(patchwork)
 
 boxplot_series <- function(
     threshold_series = c(0.75, 0.85, 0.95, 0.99), 
     sound_type = "Herring") {
-p1 <- threshold_boxplots(threshold_series[1], sound_type) + theme(axis.title = element_blank())
-p2 <- threshold_boxplots(threshold_series[2], sound_type)+ theme(
+p1 <- threshold_boxplot(threshold_series[1], sound_type) + theme(axis.title = element_blank())
+p2 <- threshold_boxplot(threshold_series[2], sound_type)+ theme(
   strip.text = element_text(size=0),
   axis.title = element_blank())
-p3 <- threshold_boxplots(threshold_series[3], sound_type)+ theme(
+p3 <- threshold_boxplot(threshold_series[3], sound_type)+ theme(
   strip.text = element_text(size=0),
   axis.title = element_blank())
-p4 <- threshold_boxplots(threshold_series[4], sound_type) + theme(
+p4 <- threshold_boxplot(threshold_series[4], sound_type) + theme(
   strip.text = element_text(size=0),
   axis.title.y = element_blank())
 
