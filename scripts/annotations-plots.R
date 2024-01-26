@@ -272,7 +272,7 @@ dat1$herr.notes <- as.character(dat1$herr.notes)
 dat1$samp.min <- 1
 
 
-alldat <- bind_rows(dat1, dat2) %>% filter(site !="Neck Point (2020)")%>%
+alldat <- bind_rows(dat1, dat2) %>% filter(site !="Neck Point (2020)", filename !="")%>%
   group_by(site) %>%
   mutate(SPL_st = scale(SPL), SPL_mean = attr(scale(SPL),"scaled:center"),
          SPL0.02to2kHz_st = scale(SPL0.02to2kHz), SPL0.02to2kHz_mean = attr(scale(SPL0.02to2kHz),"scaled:center"),
@@ -300,7 +300,7 @@ saveRDS(alldat, "wdata/all-annotations3.rds")
 #   ) %>% pivot_longer(3:11, names_to = "sound", values_to = "score") %>%
 #   mutate(site = as.factor(site))
 
-filedat2 <- alldat %>% filter(site !="Neck Point (2020)") %>% group_by(filename, site) %>%
+filedat2 <- alldat %>% filter(site !="Neck Point (2020)", filename !="") %>% group_by(filename, site) %>%
   summarise(
     `Herring` = ifelse(herring.hs > 0 & herring.hs <= 1, 1, round(mean(herring.hs))),
     `Pinnipeds` = ifelse(pinniped > 0 & pinniped <= 1, 1, round(mean(pinniped))),
