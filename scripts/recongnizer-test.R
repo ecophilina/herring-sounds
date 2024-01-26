@@ -51,7 +51,9 @@ mdat <- bind_rows(mdat1, mdat2, mdat3) %>%
 # load summary of annotations at file level created by annotations-plots.R
 alldat <- readRDS("wdata/all-annotations3.rds") 
 
-filedat2 <- alldat %>% filter(site !="Neck Point (2020)", filename !="") %>% 
+filedat2 <- alldat %>% 
+  # filter(SPL < 110) %>% 
+  filter(site !="Neck Point (2020)", filename !="") %>% 
   group_by(filename, datetime, site) %>%
   mutate(n = n()) %>%
   summarise(
@@ -65,6 +67,8 @@ filedat2 <- alldat %>% filter(site !="Neck Point (2020)", filename !="") %>%
     `Splashing` = ifelse(splahes>0 & splahes <= 1, 1, round(mean(splahes, na.rm = T))),
     `Other mechanical` = ifelse(rustling>0 & rustling <= 1, 1, round(mean(rustling, na.rm = T))),
     `Pinniped deterrent` = ifelse(tonal>0 & tonal <= 1, 1, round(mean(tonal, na.rm = T))),
+    mean_spl = mean(SPL),
+    mean_boat = mean(boat),
     n = mean(n)
   ) %>% pivot_longer(4:13, names_to = "sound", values_to = "score") %>%
   mutate(
@@ -75,7 +79,7 @@ filedat2 <- alldat %>% filter(site !="Neck Point (2020)", filename !="") %>%
     # `Boat noise`, `Wave noise`
     # )),
     Site = as.factor(site)
-  )
+  ) %>% distinct()
 
 filedat2$sound <- factor(filedat2$sound, levels = c("Herring", 
                                                     "Boat noise", "Wave noise", 
@@ -92,10 +96,15 @@ filedat2$Site <- factor(filedat2$site,
 # mdatsum <- 
 # 0.97
 
-threshold_boxplot <- function(set_threshold, sound_type = "Herring") {
-mdat %>% filter(Score > set_threshold) %>% 
+threshold_boxplot <- function(
+    detections, 
+    annotations, 
+    set_threshold, 
+    sound_type = "Herring") {
+  # browser()
+detections %>% filter(Score > set_threshold) %>% 
   group_by(datetime, site) %>% 
-  reframe(detection_time = sum(duration)) %>% left_join(filedat2, .) %>% 
+  reframe(detection_time = sum(duration)) %>% left_join(annotations, .) %>% 
     filter(sound == sound_type) %>%
   ggplot() + 
   geom_boxplot(aes(as.factor(score), detection_time)) + 
@@ -108,17 +117,21 @@ mdat %>% filter(Score > set_threshold) %>%
 
 # library(patchwork)
 
-boxplot_series <- function(
+boxplot_series <- function(detections, annotations,
     threshold_series = c(0.75, 0.85, 0.95, 0.99), 
     sound_type = "Herring") {
-p1 <- threshold_boxplot(threshold_series[1], sound_type) + theme(axis.title = element_blank())
-p2 <- threshold_boxplot(threshold_series[2], sound_type)+ theme(
+p1 <- threshold_boxplot(detections, annotations, threshold_series[1], sound_type) + 
+  theme(axis.title = element_blank())
+p2 <- threshold_boxplot(detections, annotations, threshold_series[2], sound_type)+ 
+  theme(
   strip.text = element_text(size=0),
   axis.title = element_blank())
-p3 <- threshold_boxplot(threshold_series[3], sound_type)+ theme(
+p3 <- threshold_boxplot(detections, annotations, threshold_series[3], sound_type)+ 
+  theme(
   strip.text = element_text(size=0),
   axis.title = element_blank())
-p4 <- threshold_boxplot(threshold_series[4], sound_type) + theme(
+p4 <- threshold_boxplot(detections, annotations, threshold_series[4], sound_type) + 
+  theme(
   strip.text = element_text(size=0),
   axis.title.y = element_blank())
 
@@ -132,17 +145,28 @@ y_lab_big + wrap_plots(p1, p2 , p3 , p4 , ncol = 1) +
   patchwork::plot_layout(widths = c(0.05,1))
 }
 
-boxplot_series()
+
+detections <- mdat
+annotations <- filedat2
+
+## check if removing boat noise and/or too much noise, helps--not really
+# annotations <- filter(filedat2, mean_boat < 3)
+# annotations <- filter(filedat2, mean_boat < 3, mean_spl < 120)
+# annotations <- filter(filedat2, mean_spl < 110)
+# annotations <- filter(filedat2, mean_spl < 105)
+
+
+boxplot_series(detections, annotations)
 ggsave("figs/detector-threshold-boxplots.png")
 
 
-boxplot_series(sound_type = "Wave noise") 
+boxplot_series(detections, annotations, sound_type = "Wave noise") 
 ggsave("figs/detector-threshold-boxplots-waves.png")
 
 
-boxplot_series(sound_type = "Boat noise") 
+boxplot_series(detections, annotations, sound_type = "Boat noise") 
 ggsave("figs/detector-threshold-boxplots-boats.png")
 
 
-boxplot_series(sound_type = "Other mechanical") 
+boxplot_series(detections, annotations, sound_type = "Other mechanical") 
 ggsave("figs/detector-threshold-boxplots-other.png")
